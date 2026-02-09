@@ -98,9 +98,15 @@ export class ModelTierTransformerProxy {
       return;
     }
 
-    if (requestPath.endsWith('/fetchAvailableModels')) {
+    // CLIProxy sends model list to /v1internal:fetchAvailableModels (colon-separated path)
+    if (
+      requestPath.endsWith('/fetchAvailableModels') ||
+      requestPath.endsWith(':fetchAvailableModels')
+    ) {
+      this.log(`Model list request: ${req.method} ${requestPath}`);
       await this.handleModelListRequest(req, res);
     } else {
+      this.log(`API request: ${req.method} ${requestPath}`);
       await this.handleApiRequest(req, res);
     }
   }

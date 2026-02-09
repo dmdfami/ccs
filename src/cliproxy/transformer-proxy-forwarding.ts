@@ -208,6 +208,33 @@ export interface ModelRewrite {
 }
 
 /**
+ * Check if a response model name matches the "from" model for rewriting.
+ * Uses fuzzy matching: matches exact name OR versioned variants (e.g.,
+ * "claude-opus-4-5-20251101-thinking" matches "claude-opus-4-5-thinking").
+ *
+ * The Antigravity API may return versioned model names (with date suffixes)
+ * that don't exactly match the short model name we sent in the request.
+ */
+function modelMatchesFrom(responseModel: string, from: string): boolean {
+  if (responseModel === from) return true;
+
+  // Strip -thinking suffix for base comparison, then check if response base
+  // starts with the from base (handles date-versioned variants)
+  const thinkingSuffix = '-thinking';
+  const fromHasThinking = from.endsWith(thinkingSuffix);
+  const respHasThinking = responseModel.endsWith(thinkingSuffix);
+
+  // Both must agree on thinking suffix
+  if (fromHasThinking !== respHasThinking) return false;
+
+  const fromBase = fromHasThinking ? from.slice(0, -thinkingSuffix.length) : from;
+  const respBase = respHasThinking ? responseModel.slice(0, -thinkingSuffix.length) : responseModel;
+
+  // Response base starts with from base (covers date-versioned variants)
+  return respBase.startsWith(fromBase);
+}
+
+/**
  * Rewrite a single SSE event's data line, replacing the model name
  * in message_start events. Non-data lines and other events pass through unchanged.
  */
@@ -237,7 +264,7 @@ function rewriteSSEEvent(event: string, rewrite: ModelRewrite): string {
         data.type === 'message_start' &&
         data.message &&
         typeof data.message.model === 'string' &&
-        data.message.model === rewrite.from
+        modelMatchesFrom(data.message.model, rewrite.from)
       ) {
         data.message.model = rewrite.to;
         processed.push('data: ' + JSON.stringify(data));
@@ -249,7 +276,7 @@ function rewriteSSEEvent(event: string, rewrite: ModelRewrite): string {
         data &&
         typeof data === 'object' &&
         typeof data.model === 'string' &&
-        data.model === rewrite.from
+        modelMatchesFrom(data.model, rewrite.from)
       ) {
         data.model = rewrite.to;
         processed.push('data: ' + JSON.stringify(data));
@@ -312,7 +339,7 @@ export function forwardAndRewriteModel(
                 data &&
                 typeof data === 'object' &&
                 typeof data.model === 'string' &&
-                data.model === rewrite.from
+                modelMatchesFrom(data.model, rewrite.from)
               ) {
                 data.model = rewrite.to;
                 log?.(`Response model rewritten (JSON): ${rewrite.from} -> ${rewrite.to}`);

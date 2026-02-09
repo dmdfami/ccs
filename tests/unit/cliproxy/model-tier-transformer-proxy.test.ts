@@ -504,6 +504,90 @@ describe('ModelTierTransformerProxy', () => {
       expect(body.content[0].text).toBe('Hi');
     });
 
+    it('should rewrite versioned model name in response (date suffix)', async () => {
+      upstream = await createUpstreamMock((_req, res) => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        // Antigravity may return versioned model names with date suffixes
+        res.end(
+          JSON.stringify({
+            id: 'msg_ver',
+            model: 'claude-opus-4-5-20251101-thinking',
+            content: [{ type: 'text', text: 'Hi' }],
+          })
+        );
+      });
+
+      proxy = new ModelTierTransformerProxy({
+        fallbackMap: DEFAULT_FALLBACK,
+        upstreamBaseUrl: `http://127.0.0.1:${upstream.port}`,
+      });
+      const port = await proxy.start();
+
+      const response = await proxyRequest(
+        port,
+        '/v1/messages',
+        JSON.stringify({ model: 'claude-opus-4-6-thinking' })
+      );
+      const body = JSON.parse(response.body);
+      // Fuzzy match should catch the versioned name and rewrite to target
+      expect(body.model).toBe('claude-opus-4-6-thinking');
+    });
+
+    it('should rewrite versioned model in SSE message_start event', async () => {
+      upstream = await createUpstreamMock((_req, res) => {
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.write(
+          'event: message_start\n' +
+            'data: ' +
+            JSON.stringify({
+              type: 'message_start',
+              message: {
+                id: 'msg_ver2',
+                model: 'claude-opus-4-5-20251101-thinking',
+                content: [],
+              },
+            }) +
+            '\n\n'
+        );
+        res.write('data: [DONE]\n\n');
+        res.end();
+      });
+
+      proxy = new ModelTierTransformerProxy({
+        fallbackMap: DEFAULT_FALLBACK,
+        upstreamBaseUrl: `http://127.0.0.1:${upstream.port}`,
+      });
+      const port = await proxy.start();
+
+      const response = await proxyRequest(
+        port,
+        '/v1/messages',
+        JSON.stringify({ model: 'claude-opus-4-6-thinking', stream: true })
+      );
+
+      const events = response.body
+        .split('\n\n')
+        .filter((e) => e.trim())
+        .map((e) => {
+          const dataLine = e.split('\n').find((l) => l.startsWith('data: '));
+          if (!dataLine) return null;
+          const json = dataLine.slice(6);
+          if (json === '[DONE]') return { type: 'done' };
+          try {
+            return JSON.parse(json);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      const msgStart = events.find((e: Record<string, unknown>) => e.type === 'message_start');
+      expect(msgStart).toBeDefined();
+      expect((msgStart as Record<string, Record<string, string>>).message.model).toBe(
+        'claude-opus-4-6-thinking'
+      );
+    });
+
     it('should track responseRewrites in stats', async () => {
       upstream = await createUpstreamMock((req, res) => {
         const url = req.url ?? '';
@@ -540,7 +624,7 @@ describe('ModelTierTransformerProxy', () => {
   });
 
   describe('URL path matching', () => {
-    it('should match fetchAvailableModels at end of path', async () => {
+    it('should match fetchAvailableModels at end of path (slash separator)', async () => {
       upstream = await createUpstreamMock((_req, res) => {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ models: {} }));
@@ -553,6 +637,26 @@ describe('ModelTierTransformerProxy', () => {
       const port = await proxy.start();
       const res = await proxyRequest(port, '/v1beta/fetchAvailableModels', '{}');
       expect(res.statusCode).toBe(200);
+    });
+
+    it('should match fetchAvailableModels with colon separator (CLIProxy format)', async () => {
+      upstream = await createUpstreamMock((_req, res) => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ models: {} }));
+      });
+
+      proxy = new ModelTierTransformerProxy({
+        fallbackMap: DEFAULT_FALLBACK,
+        upstreamBaseUrl: `http://127.0.0.1:${upstream.port}`,
+      });
+      const port = await proxy.start();
+
+      // CLIProxy sends /v1internal:fetchAvailableModels (colon, not slash)
+      const res = await proxyRequest(port, '/v1internal:fetchAvailableModels', '{}');
+      expect(res.statusCode).toBe(200);
+      const data = JSON.parse(res.body);
+      // Should inject the ultra model into the empty model list
+      expect(data.models['claude-opus-4-6-thinking']).toBeDefined();
     });
 
     it('should NOT match fetchAvailableModels as substring in path', async () => {
