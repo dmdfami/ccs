@@ -21,6 +21,7 @@ import cliproxyStatsRoutes from './cliproxy-stats-routes';
 import cliproxySyncRoutes from './cliproxy-sync-routes';
 import copilotRoutes from './copilot-routes';
 import cursorRoutes from './cursor-routes';
+import toolRoutes from './tool-routes';
 import miscRoutes from './misc-routes';
 import cliproxyServerRoutes from './proxy-routes';
 import authRoutes from './auth-routes';
@@ -60,6 +61,9 @@ apiRoutes.use('/cliproxy/openai-compat', providerRoutes);
 
 // ==================== WebSearch ====================
 apiRoutes.use('/websearch', websearchRoutes);
+
+// ==================== Generic Tools ====================
+apiRoutes.use('/tools', toolRoutes);
 
 // ==================== Copilot ====================
 apiRoutes.use('/copilot', copilotRoutes);

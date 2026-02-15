@@ -123,16 +123,27 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
       claude: 'claude',
     };
 
-    // Update lastUsedAt for providers with recent activity
+    const touchedProviders = new Set<CLIProxyProvider>();
+
+    // Update lastUsedAt for accounts resolved by source attribution
+    if (stats?.accountStats) {
+      for (const usage of Object.values(stats.accountStats)) {
+        if (!usage.provider || !usage.accountId) {
+          continue;
+        }
+        touchAccount(usage.provider, usage.accountId);
+        touchedProviders.add(usage.provider);
+      }
+    }
+
+    // Backward-compatible fallback: touch default accounts by provider activity
     if (stats?.requestsByProvider) {
       for (const [statsProvider, requestCount] of Object.entries(stats.requestsByProvider)) {
         if (requestCount > 0) {
           const provider = statsProviderMap[statsProvider.toLowerCase()];
-          if (provider) {
-            // Touch the default account for this provider (or all accounts)
+          if (provider && !touchedProviders.has(provider)) {
             const accounts = getProviderAccounts(provider);
             for (const account of accounts) {
-              // Only touch if this is the default account (most likely being used)
               if (account.isDefault) {
                 touchAccount(provider, account.id);
               }

@@ -15,6 +15,7 @@ export interface AuthMonitorData {
   totalSuccess: number;
   totalFailure: number;
   totalRequests: number;
+  unmappedRequests: number;
   providerStats: ProviderStats[];
   overallSuccessRate: number;
   isLoading: boolean;
@@ -44,11 +45,39 @@ export function useAuthMonitorData(): AuthMonitorData {
     return () => clearInterval(interval);
   }, [dataUpdatedAt]);
 
-  // Build a map of account email -> usage stats from CLIProxy
-  const accountStatsMap = useMemo(() => {
-    if (!statsData?.accountStats) return new Map<string, AccountUsageStats>();
-    return new Map(Object.entries(statsData.accountStats));
-  }, [statsData?.accountStats]);
+  // Build lookup maps for account stats from CLIProxy
+  const {
+    accountStatsMap,
+    accountStatsByProviderAccountId,
+    unmappedRequests,
+    unmappedSuccess,
+    unmappedFailure,
+  } = useMemo(() => {
+    const byKey = new Map<string, AccountUsageStats>();
+    const byProviderAndId = new Map<string, AccountUsageStats>();
+
+    if (statsData?.accountStats) {
+      for (const [key, value] of Object.entries(statsData.accountStats)) {
+        byKey.set(key, value);
+        if (value.provider && value.accountId) {
+          byProviderAndId.set(`${value.provider}:${value.accountId}`, value);
+        }
+      }
+    }
+
+    return {
+      accountStatsMap: byKey,
+      accountStatsByProviderAccountId: byProviderAndId,
+      unmappedRequests: statsData?.unmapped?.totalRequests ?? 0,
+      unmappedSuccess: statsData?.unmapped?.successCount ?? 0,
+      unmappedFailure: statsData?.unmapped?.failureCount ?? 0,
+    };
+  }, [
+    statsData?.accountStats,
+    statsData?.unmapped?.failureCount,
+    statsData?.unmapped?.successCount,
+    statsData?.unmapped?.totalRequests,
+  ]);
 
   // Transform auth status data into account rows
   const { accounts, totalSuccess, totalFailure, totalRequests, providerStats } = useMemo(() => {
@@ -81,7 +110,10 @@ export function useAuthMonitorData(): AuthMonitorData {
 
       status.accounts?.forEach((account: OAuthAccount) => {
         const accountEmail = account.email || account.id;
-        const realStats = accountStatsMap.get(accountEmail);
+        const accountProviderKey = `${status.provider}:${account.id}`;
+        const realStats =
+          accountStatsMap.get(accountEmail) ??
+          accountStatsByProviderAccountId.get(accountProviderKey);
         const success = realStats?.successCount ?? 0;
         const failure = realStats?.failureCount ?? 0;
         tSuccess += success;
@@ -125,14 +157,23 @@ export function useAuthMonitorData(): AuthMonitorData {
     });
     providerStatsArr.sort((a, b) => b.totalRequests - a.totalRequests);
 
+    const totalSuccessWithUnmapped = tSuccess + unmappedSuccess;
+    const totalFailureWithUnmapped = tFailure + unmappedFailure;
+
     return {
       accounts: accountsList,
-      totalSuccess: tSuccess,
-      totalFailure: tFailure,
-      totalRequests: tSuccess + tFailure,
+      totalSuccess: totalSuccessWithUnmapped,
+      totalFailure: totalFailureWithUnmapped,
+      totalRequests: totalSuccessWithUnmapped + totalFailureWithUnmapped,
       providerStats: providerStatsArr,
     };
-  }, [data?.authStatus, accountStatsMap]);
+  }, [
+    accountStatsByProviderAccountId,
+    accountStatsMap,
+    data?.authStatus,
+    unmappedFailure,
+    unmappedSuccess,
+  ]);
 
   const overallSuccessRate =
     totalRequests > 0 ? Math.round((totalSuccess / totalRequests) * 100) : 100;
@@ -142,6 +183,7 @@ export function useAuthMonitorData(): AuthMonitorData {
     totalSuccess,
     totalFailure,
     totalRequests,
+    unmappedRequests,
     providerStats,
     overallSuccessRate,
     isLoading: isLoading || statsLoading,

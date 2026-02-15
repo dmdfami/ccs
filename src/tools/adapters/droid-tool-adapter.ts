@@ -1,4 +1,5 @@
-import * as fs from 'fs';
+import { constants as fsConstants } from 'fs';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import { createInterface } from 'readline/promises';
 import { parseFlag, detectShell, formatExportLine } from '../../commands/env-command';
@@ -32,14 +33,23 @@ function createDefaultConfig(): DroidConfig {
   };
 }
 
-function readConfig(): DroidConfig {
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath, fsConstants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readConfig(): Promise<DroidConfig> {
   const configPath = getDroidConfigPath();
-  if (!fs.existsSync(configPath)) {
+  if (!(await pathExists(configPath))) {
     return createDefaultConfig();
   }
 
   try {
-    const raw = fs.readFileSync(configPath, 'utf8');
+    const raw = await fs.readFile(configPath, 'utf8');
     const parsed = JSON.parse(raw) as Partial<DroidConfig>;
     return {
       endpoint: parsed.endpoint || 'http://127.0.0.1:4317',
@@ -65,12 +75,12 @@ async function promptWithDefault(label: string, fallback: string): Promise<strin
   }
 }
 
-function writeConfigAtomic(config: DroidConfig): void {
+async function writeConfigAtomic(config: DroidConfig): Promise<void> {
   const configPath = getDroidConfigPath();
   const tmpPath = `${configPath}.tmp.${process.pid}`;
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), { mode: 0o600 });
-  fs.renameSync(tmpPath, configPath);
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(tmpPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+  await fs.rename(tmpPath, configPath);
 }
 
 function showHelp(): number {
@@ -106,7 +116,7 @@ async function handleSetup(args: string[]): Promise<number> {
     return 1;
   }
 
-  const existing = readConfig();
+  const existing = await readConfig();
   let profile = profileFlag || existing.profile;
   let endpoint = endpointFlag || existing.endpoint;
   let apiKey = keyFlag || existing.apiKey || '';
@@ -131,7 +141,7 @@ async function handleSetup(args: string[]): Promise<number> {
     apiKey: apiKey.trim(),
     updatedAt: new Date().toISOString(),
   };
-  writeConfigAtomic(config);
+  await writeConfigAtomic(config);
 
   console.log(ok(`Droid config ready: ${getDroidConfigPath()}`));
   return 0;
@@ -141,7 +151,7 @@ function isValidShellInput(value: string): boolean {
   return ['auto', 'bash', 'zsh', 'fish', 'powershell'].includes(value);
 }
 
-function handleEnv(args: string[]): number {
+async function handleEnv(args: string[]): Promise<number> {
   const shellInput = parseFlag(args, 'shell') || 'auto';
 
   if (!isValidShellInput(shellInput)) {
@@ -152,7 +162,7 @@ function handleEnv(args: string[]): number {
   const shell = detectShell(shellInput === 'zsh' ? 'bash' : shellInput);
   const droidDir = getDroidDir();
   const configPath = getDroidConfigPath();
-  const config = readConfig();
+  const config = await readConfig();
 
   const exportsMap: Record<string, string> = {
     DROID_HOME: droidDir,
@@ -172,7 +182,7 @@ function handleEnv(args: string[]): number {
   return 0;
 }
 
-function handleDoctor(): number {
+async function handleDoctor(): Promise<number> {
   const droidDir = getDroidDir();
   const configPath = getDroidConfigPath();
 
@@ -180,21 +190,21 @@ function handleDoctor(): number {
 
   let healthy = true;
 
-  if (fs.existsSync(droidDir)) {
+  if (await pathExists(droidDir)) {
     console.log(ok(`Directory exists: ${droidDir}`));
   } else {
     console.error(fail(`Directory missing: ${droidDir}`));
     healthy = false;
   }
 
-  if (fs.existsSync(configPath)) {
+  if (await pathExists(configPath)) {
     console.log(ok(`Config exists: ${configPath}`));
   } else {
     console.error(fail(`Config missing: ${configPath}`));
     healthy = false;
   }
 
-  const config = readConfig();
+  const config = await readConfig();
   if (config.endpoint) {
     console.log(ok(`Endpoint configured: ${config.endpoint}`));
   } else {

@@ -6,17 +6,30 @@
  */
 
 import { getEffectiveApiKey, getEffectiveManagementSecret } from './auth-token-manager';
+import { getAllAccountsSummary } from './account-manager';
+import { createSourceResolver, type SourceMatchStep } from './source-resolver';
 import {
   getProxyTarget,
   buildProxyUrl,
   buildProxyHeaders,
   buildManagementHeaders,
 } from './proxy-target-resolver';
+import { getAttributionConfig } from '../config/unified-config-loader';
+import type { AttributionResolverVersion } from '../config/unified-config-types';
+import type { CLIProxyProvider } from './types';
 
 /** Per-account usage statistics */
 export interface AccountUsageStats {
   /** Account email or identifier */
   source: string;
+  /** Canonical provider that source resolves to */
+  provider?: CLIProxyProvider;
+  /** Account ID used for mapping */
+  accountId?: string;
+  /** Resolver match stage used for attribution */
+  matchStep?: SourceMatchStep;
+  /** Resolver version used to map this source */
+  resolverVersion?: AttributionResolverVersion;
   /** Number of successful requests */
   successCount: number;
   /** Number of failed requests */
@@ -25,6 +38,14 @@ export interface AccountUsageStats {
   totalTokens: number;
   /** Last request timestamp */
   lastUsedAt?: string;
+}
+
+export interface UnmappedUsageStats {
+  totalRequests: number;
+  successCount: number;
+  failureCount: number;
+  totalTokens: number;
+  sources: Record<string, number>;
 }
 
 /** Usage statistics from CLIProxyAPI */
@@ -47,6 +68,10 @@ export interface CliproxyStats {
   requestsByProvider: Record<string, number>;
   /** Per-account usage breakdown */
   accountStats: Record<string, AccountUsageStats>;
+  /** Unmapped usage bucket for unresolved sources */
+  unmapped: UnmappedUsageStats;
+  /** Resolver version used for this aggregation */
+  resolverVersion: AttributionResolverVersion;
   /** Number of quota exceeded (429) events */
   quotaExceededCount: number;
   /** Number of request retries */
@@ -133,10 +158,22 @@ export async function fetchCliproxyStats(port?: number): Promise<CliproxyStats |
     const data = (await response.json()) as UsageApiResponse;
     const usage = data.usage;
 
+    const attributionConfig = getAttributionConfig();
+    const resolverVersion = attributionConfig.resolverVersion;
+    const accountsByProvider = getAllAccountsSummary();
+    const sourceResolver = createSourceResolver(accountsByProvider, resolverVersion);
+
     // Extract models, providers, and per-account stats from the nested API structure
     const requestsByModel: Record<string, number> = {};
     const requestsByProvider: Record<string, number> = {};
     const accountStats: Record<string, AccountUsageStats> = {};
+    const unmapped: UnmappedUsageStats = {
+      totalRequests: 0,
+      successCount: 0,
+      failureCount: 0,
+      totalTokens: 0,
+      sources: {},
+    };
     let totalSuccessCount = 0;
     let totalFailureCount = 0;
     let totalInputTokens = 0;
@@ -153,29 +190,49 @@ export async function fetchCliproxyStats(port?: number): Promise<CliproxyStats |
             if (modelData.details) {
               for (const detail of modelData.details) {
                 const source = detail.source || 'unknown';
+                const resolved = sourceResolver.resolve(source, provider);
+                const tokenCount = detail.tokens?.total_tokens ?? 0;
 
-                // Initialize account stats if not exists
-                if (!accountStats[source]) {
-                  accountStats[source] = {
-                    source,
-                    successCount: 0,
-                    failureCount: 0,
-                    totalTokens: 0,
-                  };
-                }
-
-                // Update account stats
                 if (detail.failed) {
-                  accountStats[source].failureCount++;
                   totalFailureCount++;
                 } else {
-                  accountStats[source].successCount++;
                   totalSuccessCount++;
                 }
 
-                const tokens = detail.tokens?.total_tokens ?? 0;
-                accountStats[source].totalTokens += tokens;
-                accountStats[source].lastUsedAt = detail.timestamp;
+                if (resolved.matched && resolved.accountKey) {
+                  const accountKey = resolved.accountKey;
+                  if (!accountStats[accountKey]) {
+                    accountStats[accountKey] = {
+                      source: accountKey,
+                      provider: resolved.provider ?? undefined,
+                      accountId: resolved.accountId ?? undefined,
+                      matchStep: resolved.matchStep,
+                      resolverVersion,
+                      successCount: 0,
+                      failureCount: 0,
+                      totalTokens: 0,
+                    };
+                  }
+
+                  if (detail.failed) {
+                    accountStats[accountKey].failureCount++;
+                  } else {
+                    accountStats[accountKey].successCount++;
+                  }
+                  accountStats[accountKey].totalTokens += tokenCount;
+                  accountStats[accountKey].lastUsedAt = detail.timestamp;
+                } else {
+                  const normalizedSource = resolved.normalizedSource || 'unknown';
+                  unmapped.totalRequests++;
+                  if (detail.failed) {
+                    unmapped.failureCount++;
+                  } else {
+                    unmapped.successCount++;
+                  }
+                  unmapped.totalTokens += tokenCount;
+                  unmapped.sources[normalizedSource] =
+                    (unmapped.sources[normalizedSource] ?? 0) + 1;
+                }
 
                 // Aggregate token breakdowns
                 totalInputTokens += detail.tokens?.input_tokens ?? 0;
@@ -200,6 +257,8 @@ export async function fetchCliproxyStats(port?: number): Promise<CliproxyStats |
       requestsByModel,
       requestsByProvider,
       accountStats,
+      unmapped,
+      resolverVersion,
       quotaExceededCount: usage?.failure_count ?? data.failed_requests ?? 0,
       retryCount: 0, // API doesn't track retries separately
       collectedAt: new Date().toISOString(),

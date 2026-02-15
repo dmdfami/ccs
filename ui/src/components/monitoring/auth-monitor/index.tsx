@@ -25,6 +25,7 @@ export function AuthMonitor() {
     totalSuccess,
     totalFailure,
     totalRequests,
+    unmappedRequests,
     providerStats,
     overallSuccessRate,
     isLoading,
@@ -123,7 +124,7 @@ export function AuthMonitor() {
       </div>
 
       {/* Summary Stats Row */}
-      <div className="grid grid-cols-4 gap-3 p-4 border-b border-border bg-muted/20 dark:bg-zinc-900/30">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 p-4 border-b border-border bg-muted/20 dark:bg-zinc-900/30">
         <SummaryCard
           icon={<Activity className="w-4 h-4" />}
           label="Accounts"
@@ -141,6 +142,12 @@ export function AuthMonitor() {
           label="Failed"
           value={totalFailure.toLocaleString()}
           color={totalFailure > 0 ? STATUS_COLORS.failed : undefined}
+        />
+        <SummaryCard
+          icon={<Activity className="w-4 h-4" />}
+          label="Unmapped"
+          value={unmappedRequests.toLocaleString()}
+          color={unmappedRequests > 0 ? STATUS_COLORS.degraded : undefined}
         />
         <SummaryCard
           icon={<Activity className="w-4 h-4" />}

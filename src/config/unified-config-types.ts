@@ -18,8 +18,9 @@
  * Version 6 = Customizable auth tokens (API key and management secret)
  * Version 7 = Quota management for hybrid auto+manual account control
  * Version 8 = Thinking/reasoning budget configuration
+ * Version 9 = Usage attribution resolver configuration
  */
-export const UNIFIED_CONFIG_VERSION = 8;
+export const UNIFIED_CONFIG_VERSION = 9;
 
 /**
  * Supported CLIProxy providers.
@@ -668,6 +669,17 @@ export const DEFAULT_IMAGE_ANALYSIS_CONFIG: ImageAnalysisConfig = {
   },
 };
 
+export type AttributionResolverVersion = 'v1' | 'v2';
+
+export interface AttributionConfig {
+  /** Source resolver strategy for usage attribution */
+  resolverVersion: AttributionResolverVersion;
+}
+
+export const DEFAULT_ATTRIBUTION_CONFIG: AttributionConfig = {
+  resolverVersion: 'v2',
+};
+
 /**
  * Main unified configuration structure.
  * Stored in ~/.ccs/config.yaml
@@ -705,6 +717,8 @@ export interface UnifiedConfig {
   dashboard_auth?: DashboardAuthConfig;
   /** Image analysis configuration (vision via CLIProxy) */
   image_analysis?: ImageAnalysisConfig;
+  /** Usage attribution resolver configuration */
+  attribution?: AttributionConfig;
 }
 
 /**
@@ -812,6 +826,7 @@ export function createEmptyUnifiedConfig(): UnifiedConfig {
     thinking: { ...DEFAULT_THINKING_CONFIG },
     dashboard_auth: { ...DEFAULT_DASHBOARD_AUTH_CONFIG },
     image_analysis: { ...DEFAULT_IMAGE_ANALYSIS_CONFIG },
+    attribution: { ...DEFAULT_ATTRIBUTION_CONFIG },
   };
 }
 

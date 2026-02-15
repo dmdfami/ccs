@@ -15,6 +15,14 @@ import type { UnifiedQuotaResult } from '@/lib/utils';
 export interface AccountUsageStats {
   /** Account email or identifier */
   source: string;
+  /** Canonical provider after source resolver mapping */
+  provider?: string;
+  /** Account ID used for mapping */
+  accountId?: string;
+  /** Resolver match stage */
+  matchStep?: 'account_id' | 'email' | 'nickname' | 'alias' | 'unmapped';
+  /** Resolver version used for this account stats entry */
+  resolverVersion?: 'v1' | 'v2';
   /** Number of successful requests */
   successCount: number;
   /** Number of failed requests */
@@ -23,6 +31,14 @@ export interface AccountUsageStats {
   totalTokens: number;
   /** Last request timestamp */
   lastUsedAt?: string;
+}
+
+export interface UnmappedUsageStats {
+  totalRequests: number;
+  successCount: number;
+  failureCount: number;
+  totalTokens: number;
+  sources: Record<string, number>;
 }
 
 /** CLIProxy usage statistics */
@@ -39,6 +55,10 @@ export interface CliproxyStats {
   requestsByProvider: Record<string, number>;
   /** Per-account usage breakdown */
   accountStats: Record<string, AccountUsageStats>;
+  /** Usage that could not be mapped to a configured account */
+  unmapped: UnmappedUsageStats;
+  /** Resolver version active for this stats snapshot */
+  resolverVersion: 'v1' | 'v2';
   quotaExceededCount: number;
   retryCount: number;
   collectedAt: string;

@@ -21,6 +21,41 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+async function requestTool<T>(toolId: string, endpoint: string, options?: RequestInit): Promise<T> {
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const encodedToolId = encodeURIComponent(toolId);
+  const primaryUrl = `${BASE_URL}/tools/${encodedToolId}${normalizedEndpoint}`;
+  const fallbackUrl = `${BASE_URL}/${encodedToolId}${normalizedEndpoint}`;
+
+  const runRequest = async (url: string): Promise<Response> => {
+    return fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+  };
+
+  const parseError = async (response: Response): Promise<string> => {
+    const payload = await response.json().catch(() => ({ error: response.statusText }));
+    return payload.error || response.statusText || 'Unknown error';
+  };
+
+  const primaryResponse = await runRequest(primaryUrl);
+  if (primaryResponse.ok) {
+    return primaryResponse.json();
+  }
+
+  if (primaryResponse.status !== 404) {
+    throw new Error(await parseError(primaryResponse));
+  }
+
+  const fallbackResponse = await runRequest(fallbackUrl);
+  if (!fallbackResponse.ok) {
+    throw new Error(await parseError(fallbackResponse));
+  }
+
+  return fallbackResponse.json();
+}
+
 // Types
 export interface Profile {
   name: string;
@@ -360,6 +395,13 @@ export interface ProxyStopResult {
   error?: string;
 }
 
+export interface ToolDescriptor {
+  id: string;
+  summary: string;
+  subcommands: readonly string[];
+  hasApiRoutes: boolean;
+}
+
 /** Result from checking for CLIProxyAPI updates */
 export interface CliproxyUpdateCheckResult {
   hasUpdate: boolean;
@@ -571,6 +613,11 @@ export const api = {
         return res.text();
       },
     },
+  },
+  tools: {
+    list: () => request<{ tools: ToolDescriptor[] }>('/tools'),
+    request: <T>(toolId: string, endpoint: string, options?: RequestInit) =>
+      requestTool<T>(toolId, endpoint, options),
   },
   accounts: {
     list: () => request<{ accounts: Account[]; default: string | null }>('/accounts'),
