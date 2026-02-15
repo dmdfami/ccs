@@ -5,7 +5,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { PROVIDER_COLORS } from '@/lib/provider-config';
+import { getProviderColor } from '@/lib/provider-config';
 import { usePrivacy } from '@/contexts/privacy-context';
 
 import type { AccountFlowVizProps } from './types';
@@ -87,7 +87,7 @@ export function AccountFlowViz({
     requestAnimationFrame(animate);
   }, [showDetails, calculatePaths]);
 
-  const providerColor = PROVIDER_COLORS[providerData.provider.toLowerCase()] || '#6b7280';
+  const providerColor = getProviderColor(providerData.provider);
   const zones = useMemo(() => splitAccountsIntoZones(accounts), [accounts]);
   const { leftAccounts, rightAccounts, topAccounts, bottomAccounts } = zones;
   const hasRightAccounts = rightAccounts.length > 0;

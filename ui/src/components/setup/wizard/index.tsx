@@ -27,7 +27,7 @@ import { applyDefaultPreset } from '@/lib/preset-utils';
 import { usePrivacy } from '@/contexts/privacy-context';
 import { toast } from 'sonner';
 
-import { PROVIDERS, ALL_STEPS, getStepProgress } from './constants';
+import { getProviders, ALL_STEPS, getStepProgress } from './constants';
 import { ProgressIndicator } from './progress-indicator';
 import { ProviderStep } from './steps/provider-step';
 import { AuthStep } from './steps/auth-step';
@@ -149,6 +149,7 @@ export function QuickSetupWizard({ open, onClose }: QuickSetupWizardProps) {
 
   const authCommand = `ccs ${selectedProvider} --auth --add`;
   const currentProgress = getStepProgress(step);
+  const providers = getProviders();
 
   // Prevent accidental close when user has made progress
   const handleOpenChange = (isOpen: boolean) => {
@@ -195,13 +196,13 @@ export function QuickSetupWizard({ open, onClose }: QuickSetupWizardProps) {
 
         <div className="space-y-4 py-4">
           {step === 'provider' && (
-            <ProviderStep providers={PROVIDERS} onSelect={handleProviderSelect} />
+            <ProviderStep providers={providers} onSelect={handleProviderSelect} />
           )}
 
           {step === 'auth' && (
             <AuthStep
               selectedProvider={selectedProvider}
-              providers={PROVIDERS}
+              providers={providers}
               authCommand={authCommand}
               isRefreshing={isRefreshing}
               isPending={startAuthMutation.isPending}
@@ -256,7 +257,7 @@ export { AuthStep } from './steps/auth-step';
 export { AccountStep } from './steps/account-step';
 export { VariantStep } from './steps/variant-step';
 export { SuccessStep } from './steps/success-step';
-export { PROVIDERS, ALL_STEPS, getStepProgress } from './constants';
+export { getProviders, PROVIDERS, ALL_STEPS, getStepProgress } from './constants';
 export type {
   WizardStep,
   QuickSetupWizardProps,

@@ -8,6 +8,7 @@ import { PrivacyProvider } from '@/contexts/privacy-context';
 import { AuthProvider } from '@/contexts/auth-context';
 import { RequireAuth } from '@/components/auth/require-auth';
 import { Layout } from '@/components/layout/layout';
+import { useProviderCatalogBootstrap } from '@/hooks/use-provider-catalog-bootstrap';
 import { Loader2 } from 'lucide-react';
 
 // Eager load: HomePage (initial route) + LoginPage (auth flow)
@@ -44,103 +45,111 @@ function PageLoader() {
   );
 }
 
+function AppShell() {
+  useProviderCatalogBootstrap();
+
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <PrivacyProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public route: Login page */}
+              <Route path="/login" element={<LoginPage />} />
+
+              {/* Protected routes: wrapped with RequireAuth */}
+              <Route element={<RequireAuth />}>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route
+                    path="/analytics"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <AnalyticsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/providers"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <ApiPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/cliproxy"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CliproxyPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/cliproxy/control-panel"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <CliproxyControlPanelPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/tools/:toolId"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <ToolPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route path="/copilot" element={<Navigate to="/tools/copilot" replace />} />
+                  <Route path="/cursor" element={<Navigate to="/tools/cursor" replace />} />
+                  <Route
+                    path="/accounts"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <AccountsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <SettingsPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/health"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <HealthPage />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/shared"
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <SharedPage />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+            </Routes>
+            <Toaster position="top-right" />
+          </BrowserRouter>
+        </AuthProvider>
+      </PrivacyProvider>
+    </ThemeProvider>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-        <PrivacyProvider>
-          <AuthProvider>
-            <BrowserRouter>
-              <Routes>
-                {/* Public route: Login page */}
-                <Route path="/login" element={<LoginPage />} />
-
-                {/* Protected routes: wrapped with RequireAuth */}
-                <Route element={<RequireAuth />}>
-                  <Route element={<Layout />}>
-                    <Route path="/" element={<HomePage />} />
-                    <Route
-                      path="/analytics"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <AnalyticsPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/providers"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <ApiPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/cliproxy"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <CliproxyPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/cliproxy/control-panel"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <CliproxyControlPanelPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/tools/:toolId"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <ToolPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route path="/copilot" element={<Navigate to="/tools/copilot" replace />} />
-                    <Route path="/cursor" element={<Navigate to="/tools/cursor" replace />} />
-                    <Route
-                      path="/accounts"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <AccountsPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/settings"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <SettingsPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/health"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <HealthPage />
-                        </Suspense>
-                      }
-                    />
-                    <Route
-                      path="/shared"
-                      element={
-                        <Suspense fallback={<PageLoader />}>
-                          <SharedPage />
-                        </Suspense>
-                      }
-                    />
-                  </Route>
-                </Route>
-              </Routes>
-              <Toaster position="top-right" />
-            </BrowserRouter>
-          </AuthProvider>
-        </PrivacyProvider>
-      </ThemeProvider>
+      <AppShell />
     </QueryClientProvider>
   );
 }

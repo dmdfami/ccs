@@ -2,6 +2,7 @@ import { constants as fsConstants } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { getCcsDir } from '../../utils/config-manager';
+import { writeFileAtomic } from '../../utils/atomic-writer';
 
 const DEFAULT_DROID_ENDPOINT = 'http://127.0.0.1:4317';
 const DEFAULT_DROID_PROFILE = 'droid';
@@ -94,19 +95,8 @@ export async function readDroidConfig(): Promise<DroidConfig> {
 
 export async function writeDroidConfigAtomic(config: DroidConfig): Promise<void> {
   const configPath = getDroidConfigPath();
-  const tmpPath = `${configPath}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}`;
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
-
-  try {
-    await fs.writeFile(tmpPath, JSON.stringify(config, null, 2), { mode: 0o600 });
-    await fs.rename(tmpPath, configPath);
-  } finally {
-    try {
-      await fs.unlink(tmpPath);
-    } catch {
-      // Ignore cleanup errors when temp file was already moved/removed.
-    }
-  }
+  const payload = `${JSON.stringify(config, null, 2)}\n`;
+  await writeFileAtomic(configPath, payload, { mode: 0o600 });
 }
 
 export function validateDroidEndpoint(endpoint: string): string | null {

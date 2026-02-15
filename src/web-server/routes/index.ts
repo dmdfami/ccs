@@ -13,6 +13,7 @@ import accountRoutes from './account-routes';
 import configRoutes from './config-routes';
 import healthRoutes from './health-routes';
 import providerRoutes from './provider-routes';
+import providerCatalogRoutes from './provider-catalog-routes';
 import variantRoutes from './variant-routes';
 import settingsRoutes from './settings-routes';
 import websearchRoutes from './websearch-routes';
@@ -40,6 +41,7 @@ apiRoutes.use('/accounts', accountRoutes);
 // ==================== Unified Config ====================
 // Config format, migration
 apiRoutes.use('/config', configRoutes);
+apiRoutes.use('/providers', providerCatalogRoutes);
 
 // ==================== Health Checks ====================
 apiRoutes.use('/health', healthRoutes);

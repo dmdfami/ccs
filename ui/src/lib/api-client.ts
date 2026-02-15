@@ -3,9 +3,9 @@
  * Phase 03: REST API Routes & CRUD
  */
 
-import type { CLIProxyProvider } from './provider-config';
-
 const BASE_URL = '/api';
+
+export type CLIProxyProvider = string;
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, {
@@ -402,6 +402,26 @@ export interface ToolDescriptor {
   hasApiRoutes: boolean;
 }
 
+export type ProviderOAuthFlowType = 'authorization_code' | 'device_code';
+
+export interface ProviderCatalogEntry {
+  id: string;
+  displayName: string;
+  oauthFlow: ProviderOAuthFlowType;
+  aliases: string[];
+  logoAssetPath: string | null;
+  features: {
+    supportsQuota: boolean;
+    requiresNickname: boolean;
+    supportsImageAnalysis: boolean;
+  };
+}
+
+export interface ProviderCatalogResponse {
+  version: number;
+  providers: ProviderCatalogEntry[];
+}
+
 export type CliproxySourceMatchStep = 'account_id' | 'email' | 'nickname' | 'alias' | 'unmapped';
 
 export interface CliproxyAccountUsageStats {
@@ -659,6 +679,9 @@ export const api = {
     list: () => request<{ tools: ToolDescriptor[] }>('/tools'),
     request: <T>(toolId: string, endpoint: string, options?: RequestInit) =>
       requestTool<T>(toolId, endpoint, options),
+  },
+  providers: {
+    catalog: () => request<ProviderCatalogResponse>('/providers/catalog'),
   },
   accounts: {
     list: () => request<{ accounts: Account[]; default: string | null }>('/accounts'),

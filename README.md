@@ -141,6 +141,7 @@ ccs agy       # Antigravity (OAuth)
 ccs ollama    # Local Ollama (no API key needed)
 ccs glm       # GLM (API key)
 ccs tool droid setup  # Factory Droid setup wizard
+ccs tool droid env --include-secrets  # Export Droid env + API key (opt-in)
 ```
 
 ### Kiro Auth Methods

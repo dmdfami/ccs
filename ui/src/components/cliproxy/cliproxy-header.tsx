@@ -10,7 +10,7 @@ import { RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 import { useCliproxyAuth } from '@/hooks/use-cliproxy';
 import { useCliproxyAuthFlow } from '@/hooks/use-cliproxy-auth-flow';
 import { cn } from '@/lib/utils';
-import { CLIPROXY_PROVIDERS, getProviderDisplayName } from '@/lib/provider-config';
+import { getProviderDisplayName, getProviderIds } from '@/lib/provider-config';
 
 interface VersionInfo {
   currentVersion: string;
@@ -136,7 +136,7 @@ export function CliproxyHeader({
       .catch(() => {}); // Silently fail
   }, []);
 
-  const providers = CLIPROXY_PROVIDERS.map((id) => ({
+  const providers = getProviderIds().map((id) => ({
     id,
     displayName: getProviderDisplayName(id),
   }));

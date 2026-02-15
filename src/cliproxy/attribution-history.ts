@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { getCcsDir } from '../utils/config-manager';
+import { writeFileAtomic } from '../utils/atomic-writer';
 import type { AttributionResolverVersion } from '../config/unified-config-types';
 import type { CLIProxyProvider } from './types';
 import type { SourceMatchStep, SourceResolution } from './source-resolver';
@@ -207,20 +208,8 @@ export class AttributionHistoryStore {
     }
 
     const historyPath = getAttributionHistoryPath();
-    const tmpPath = `${historyPath}.tmp.${process.pid}`;
-    await fs.mkdir(path.dirname(historyPath), { recursive: true });
     const payload = `${JSON.stringify(toSnapshot(this.records), null, 2)}\n`;
-
-    try {
-      await fs.writeFile(tmpPath, payload, { mode: 0o600 });
-      await fs.rename(tmpPath, historyPath);
-    } finally {
-      try {
-        await fs.unlink(tmpPath);
-      } catch {
-        // Ignore cleanup errors when tmp file is already moved/removed.
-      }
-    }
+    await writeFileAtomic(historyPath, payload, { mode: 0o600 });
 
     this.dirty = false;
   }

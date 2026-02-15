@@ -51,21 +51,16 @@ export function QuickStatsRow() {
     return <StatsSkeleton />;
   }
 
-  const usage = stats?.usage ?? {};
-  const totalRequests = (usage.total_requests as number) ?? 0;
-  const successCount = (usage.success_count as number) ?? 0;
-  const totalTokens = (usage.total_tokens as number) ?? 0;
+  const totalRequests = stats?.totalRequests ?? 0;
+  const successCount = stats?.successCount ?? 0;
+  const totalTokens = stats?.tokens.total ?? 0;
 
   const successRate = totalRequests > 0 ? ((successCount / totalRequests) * 100).toFixed(1) : '0';
 
   const tokenDisplay =
     totalTokens > 1000 ? `${(totalTokens / 1000).toFixed(1)}K` : String(totalTokens);
 
-  const apis = (usage.apis as Record<string, { models?: Record<string, unknown> }>) ?? {};
-  const modelCount = Object.keys(apis).reduce((count, api) => {
-    const apiData = apis[api];
-    return count + Object.keys(apiData?.models ?? {}).length;
-  }, 0);
+  const modelCount = Object.keys(stats?.requestsByModel ?? {}).length;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

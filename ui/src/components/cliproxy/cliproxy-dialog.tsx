@@ -16,14 +16,20 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCreateVariant, useCliproxyAuth } from '@/hooks/use-cliproxy';
 import { usePrivacy } from '@/contexts/privacy-context';
-import { CLIPROXY_PROVIDERS, getProviderDisplayName } from '@/lib/provider-config';
+import { getProviderDisplayName, getProviderIds, isValidProvider } from '@/lib/provider-config';
+
+const providerSchema = z
+  .string()
+  .trim()
+  .min(1, 'Provider is required')
+  .refine((value) => isValidProvider(value), { message: 'Provider is required' });
 
 const singleProviderSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
     .regex(/^[a-zA-Z][a-zA-Z0-9._-]*$/, 'Invalid variant name'),
-  provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+  provider: providerSchema,
   model: z.string().optional(),
   account: z.string().optional(),
 });
@@ -36,17 +42,17 @@ const compositeSchema = z.object({
   default_tier: z.enum(['opus', 'sonnet', 'haiku'], { message: 'Default tier is required' }),
   tiers: z.object({
     opus: z.object({
-      provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+      provider: providerSchema,
       model: z.string().trim().min(1, 'Model is required'),
       account: z.string().optional(),
     }),
     sonnet: z.object({
-      provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+      provider: providerSchema,
       model: z.string().trim().min(1, 'Model is required'),
       account: z.string().optional(),
     }),
     haiku: z.object({
-      provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+      provider: providerSchema,
       model: z.string().trim().min(1, 'Model is required'),
       account: z.string().optional(),
     }),
@@ -61,16 +67,16 @@ interface CliproxyDialogProps {
   onClose: () => void;
 }
 
-const providerOptions = CLIPROXY_PROVIDERS.map((id) => ({
-  value: id,
-  label: getProviderDisplayName(id),
-}));
-
 export function CliproxyDialog({ open, onClose }: CliproxyDialogProps) {
   const createMutation = useCreateVariant();
   const { data: authData } = useCliproxyAuth();
   const { privacyMode } = usePrivacy();
   const [mode, setMode] = useState<'single' | 'composite'>('single');
+  const providerOptions = getProviderIds().map((id) => ({
+    value: id,
+    label: getProviderDisplayName(id),
+  }));
+  const defaultProvider = providerOptions[0]?.value ?? 'gemini';
 
   const singleForm = useForm<SingleProviderFormData>({
     resolver: zodResolver(singleProviderSchema),
@@ -81,9 +87,9 @@ export function CliproxyDialog({ open, onClose }: CliproxyDialogProps) {
     defaultValues: {
       default_tier: 'opus',
       tiers: {
-        opus: { provider: 'gemini', model: '' },
-        sonnet: { provider: 'gemini', model: '' },
-        haiku: { provider: 'gemini', model: '' },
+        opus: { provider: defaultProvider, model: '' },
+        sonnet: { provider: defaultProvider, model: '' },
+        haiku: { provider: defaultProvider, model: '' },
       },
     },
   });

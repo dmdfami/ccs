@@ -13,11 +13,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useUpdateVariant } from '@/hooks/use-cliproxy';
-import { CLIPROXY_PROVIDERS, getProviderDisplayName } from '@/lib/provider-config';
+import { getProviderDisplayName, getProviderIds, isValidProvider } from '@/lib/provider-config';
 import type { Variant } from '@/lib/api-client';
 
+const providerSchema = z
+  .string()
+  .trim()
+  .min(1, 'Provider is required')
+  .refine((value) => isValidProvider(value), { message: 'Provider is required' });
+
 const singleProviderSchema = z.object({
-  provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+  provider: providerSchema,
   model: z.string().optional(),
   account: z.string().optional(),
 });
@@ -26,17 +32,17 @@ const compositeSchema = z.object({
   default_tier: z.enum(['opus', 'sonnet', 'haiku'], { message: 'Default tier is required' }),
   tiers: z.object({
     opus: z.object({
-      provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+      provider: providerSchema,
       model: z.string().trim().min(1, 'Model is required'),
       account: z.string().optional(),
     }),
     sonnet: z.object({
-      provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+      provider: providerSchema,
       model: z.string().trim().min(1, 'Model is required'),
       account: z.string().optional(),
     }),
     haiku: z.object({
-      provider: z.enum(CLIPROXY_PROVIDERS, { message: 'Provider is required' }),
+      provider: providerSchema,
       model: z.string().trim().min(1, 'Model is required'),
       account: z.string().optional(),
     }),
@@ -52,14 +58,13 @@ interface CliproxyEditDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const providerOptions = CLIPROXY_PROVIDERS.map((id) => ({
-  value: id,
-  label: getProviderDisplayName(id),
-}));
-
 export function CliproxyEditDialog({ variant, open, onOpenChange }: CliproxyEditDialogProps) {
   const updateMutation = useUpdateVariant();
   const isComposite = variant?.type === 'composite';
+  const providerOptions = getProviderIds().map((id) => ({
+    value: id,
+    label: getProviderDisplayName(id),
+  }));
 
   const singleForm = useForm<SingleProviderFormData>({
     resolver: zodResolver(singleProviderSchema),
@@ -75,7 +80,7 @@ export function CliproxyEditDialog({ variant, open, onOpenChange }: CliproxyEdit
 
     if (isComposite && variant.tiers && variant.default_tier) {
       const mapTier = (t: { provider: string; model: string; account?: string }) => ({
-        provider: t.provider as (typeof CLIPROXY_PROVIDERS)[number],
+        provider: t.provider,
         model: t.model,
         account: t.account || '',
       });

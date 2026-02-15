@@ -72,6 +72,20 @@ describe('droid-tool-adapter', () => {
     expect(errorLines.some((line) => line.includes('--endpoint requires --profile'))).toBe(true);
   });
 
+  it('rejects key override when profile is missing', async () => {
+    const exitCode = await droidToolAdapter.run(['setup', '--key', 'sk-droid']);
+    expect(exitCode).toBe(1);
+    expect(errorLines.some((line) => line.includes('--key requires --profile'))).toBe(true);
+  });
+
+  it('rejects setup flags with missing values', async () => {
+    const exitCode = await droidToolAdapter.run(['setup', '--profile', '--endpoint', '--key']);
+    expect(exitCode).toBe(1);
+    expect(errorLines.some((line) => line.includes('--profile requires a value'))).toBe(true);
+    expect(errorLines.some((line) => line.includes('--endpoint requires a value'))).toBe(true);
+    expect(errorLines.some((line) => line.includes('--key requires a value'))).toBe(true);
+  });
+
   it('rejects invalid endpoint URLs in setup flags', async () => {
     const exitCode = await droidToolAdapter.run([
       'setup',
@@ -85,7 +99,7 @@ describe('droid-tool-adapter', () => {
     expect(errorLines.some((line) => line.includes('valid URL'))).toBe(true);
   });
 
-  it('prints droid api key env export when configured', async () => {
+  it('omits droid api key env export by default when configured', async () => {
     const configPath = path.join(tempHome, '.ccs', 'tools', 'droid', 'config.json');
     fs.mkdirSync(path.dirname(configPath), { recursive: true });
     fs.writeFileSync(
@@ -104,7 +118,61 @@ describe('droid-tool-adapter', () => {
 
     const exitCode = await droidToolAdapter.run(['env', '--shell', 'bash']);
     expect(exitCode).toBe(0);
+    expect(logLines.some((line) => line.includes("export DROID_API_KEY='sk-droid'"))).toBe(false);
+    expect(
+      errorLines.some((line) => line.includes('Use --include-secrets to export it'))
+    ).toBe(true);
+  });
+
+  it('prints droid api key env export with include-secrets flag', async () => {
+    const configPath = path.join(tempHome, '.ccs', 'tools', 'droid', 'config.json');
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          profile: 'factory',
+          endpoint: 'https://droid.example.com',
+          apiKey: 'sk-droid',
+          updatedAt: new Date().toISOString(),
+        },
+        null,
+        2
+      )
+    );
+
+    const exitCode = await droidToolAdapter.run(['env', '--shell', 'bash', '--include-secrets']);
+    expect(exitCode).toBe(0);
     expect(logLines.some((line) => line.includes("export DROID_API_KEY='sk-droid'"))).toBe(true);
+  });
+
+  it('supports deprecated with-api-key alias for env export', async () => {
+    const configPath = path.join(tempHome, '.ccs', 'tools', 'droid', 'config.json');
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(
+        {
+          profile: 'factory',
+          endpoint: 'https://droid.example.com',
+          apiKey: 'sk-droid',
+          updatedAt: new Date().toISOString(),
+        },
+        null,
+        2
+      )
+    );
+
+    const exitCode = await droidToolAdapter.run(['env', '--shell', 'bash', '--with-api-key']);
+    expect(exitCode).toBe(0);
+    expect(logLines.some((line) => line.includes("export DROID_API_KEY='sk-droid'"))).toBe(true);
+    expect(errorLines.some((line) => line.includes('deprecated'))).toBe(true);
+  });
+
+  it('rejects invalid shell values for env export', async () => {
+    const exitCode = await droidToolAdapter.run(['env', '--shell', 'invalid-shell']);
+    expect(exitCode).toBe(1);
+    expect(errorLines.some((line) => line.includes('Invalid shell'))).toBe(true);
   });
 
   it('reports unhealthy doctor status when config is missing', async () => {

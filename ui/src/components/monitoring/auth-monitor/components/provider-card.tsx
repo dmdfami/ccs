@@ -5,7 +5,7 @@
 import type React from 'react';
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { cn, STATUS_COLORS } from '@/lib/utils';
-import { PROVIDER_COLORS } from '@/lib/provider-config';
+import { getProviderColor } from '@/lib/provider-config';
 import { ProviderIcon } from '@/components/shared/provider-icon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ProviderStats } from '../types';
@@ -30,7 +30,7 @@ export function ProviderCard({
   onMouseLeave,
 }: ProviderCardProps) {
   const successRate = getSuccessRate(stats.successCount, stats.failureCount);
-  const providerColor = PROVIDER_COLORS[stats.provider.toLowerCase()] || '#6b7280';
+  const providerColor = getProviderColor(stats.provider);
 
   return (
     <button

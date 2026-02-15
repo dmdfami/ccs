@@ -1,11 +1,12 @@
 import { Loader2, Wrench } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useTool } from '@/hooks/use-tool';
 import { CopilotPage } from './copilot';
 import { CursorPage } from './cursor';
 import { DroidPage } from './droid';
 
-const TOOL_PAGE_COMPONENTS: Record<string, () => JSX.Element> = {
+const TOOL_PAGE_COMPONENTS: Record<string, ComponentType> = {
   copilot: CopilotPage,
   cursor: CursorPage,
   droid: DroidPage,

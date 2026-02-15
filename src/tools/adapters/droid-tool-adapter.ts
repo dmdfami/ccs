@@ -12,81 +12,15 @@ import {
   writeDroidConfigAtomic,
   type DroidConfig,
 } from './droid-config';
+import {
+  parseBooleanFlag,
+  parseSetupFlags,
+  validateSetupFlags,
+  type ParsedSetupFlags,
+} from './droid-tool-flags';
 
 const DROID_SUBCOMMANDS = ['setup', 'env', 'doctor', 'help', '--help', '-h'] as const;
 const VALID_SHELL_INPUTS = ['auto', 'bash', 'zsh', 'fish', 'powershell'] as const;
-
-interface ParsedSetupFlag {
-  value: string | undefined;
-  provided: boolean;
-  missingValue: boolean;
-}
-
-interface ParsedSetupFlags {
-  profile: ParsedSetupFlag;
-  endpoint: ParsedSetupFlag;
-  key: ParsedSetupFlag;
-}
-
-interface SetupValidationResult {
-  errors: string[];
-}
-
-function parseSetupFlag(args: string[], name: 'profile' | 'endpoint' | 'key'): ParsedSetupFlag {
-  const exactFlag = `--${name}`;
-  const prefixedFlag = `${exactFlag}=`;
-  const exactIndex = args.findIndex((arg) => arg === exactFlag);
-  if (exactIndex !== -1) {
-    const next = args[exactIndex + 1];
-    if (!next || next.startsWith('--')) {
-      return { value: undefined, provided: true, missingValue: true };
-    }
-    return { value: next, provided: true, missingValue: false };
-  }
-
-  const prefixedArg = args.find((arg) => arg.startsWith(prefixedFlag));
-  if (!prefixedArg) {
-    return { value: undefined, provided: false, missingValue: false };
-  }
-
-  const value = prefixedArg.slice(prefixedFlag.length);
-  if (value.length === 0) {
-    return { value: undefined, provided: true, missingValue: true };
-  }
-
-  return { value, provided: true, missingValue: false };
-}
-
-function parseSetupFlags(args: string[]): ParsedSetupFlags {
-  return {
-    profile: parseSetupFlag(args, 'profile'),
-    endpoint: parseSetupFlag(args, 'endpoint'),
-    key: parseSetupFlag(args, 'key'),
-  };
-}
-
-function validateSetupFlags(flags: ParsedSetupFlags): SetupValidationResult {
-  const errors: string[] = [];
-
-  if (flags.profile.missingValue) {
-    errors.push('--profile requires a value');
-  }
-  if (flags.endpoint.missingValue) {
-    errors.push('--endpoint requires a value');
-  }
-  if (flags.key.missingValue) {
-    errors.push('--key requires a value');
-  }
-
-  if (flags.endpoint.provided && !flags.profile.provided) {
-    errors.push('--endpoint requires --profile');
-  }
-  if (flags.key.provided && !flags.profile.provided) {
-    errors.push('--key requires --profile');
-  }
-
-  return { errors };
-}
 
 function isValidShellInput(value: string): boolean {
   return VALID_SHELL_INPUTS.includes(value as (typeof VALID_SHELL_INPUTS)[number]);
@@ -153,7 +87,12 @@ function showHelp(): number {
   console.log('Examples:');
   console.log('  ccs tool droid setup');
   console.log('  eval "$(ccs tool droid env)"');
+  console.log('  eval "$(ccs tool droid env --include-secrets)"');
   console.log('  ccs tool droid doctor');
+  console.log('');
+  console.log('Env options:');
+  console.log('  --shell <auto|bash|zsh|fish|powershell>  Output shell syntax');
+  console.log('  --include-secrets                         Export DROID_API_KEY when configured');
   console.log('');
   return 0;
 }
@@ -209,10 +148,15 @@ async function handleSetup(args: string[]): Promise<number> {
 
 async function handleEnv(args: string[]): Promise<number> {
   const shellInput = parseFlag(args, 'shell') || 'auto';
+  const includeSecrets = parseBooleanFlag(args, 'include-secrets', ['with-api-key']);
 
   if (!isValidShellInput(shellInput)) {
     console.error(fail(`Invalid shell: ${shellInput}. Use: auto, bash, zsh, fish, powershell`));
     return 1;
+  }
+
+  if (args.includes('--with-api-key') || parseFlag(args, 'with-api-key') !== undefined) {
+    console.error(info('`--with-api-key` is deprecated. Use `--include-secrets` instead.'));
   }
 
   const shell = detectShell(shellInput === 'zsh' ? 'bash' : shellInput);
@@ -227,8 +171,10 @@ async function handleEnv(args: string[]): Promise<number> {
     DROID_PROFILE: config.profile,
   };
 
-  if (config.apiKey) {
+  if (includeSecrets && config.apiKey) {
     exportsMap['DROID_API_KEY'] = config.apiKey;
+  } else if (config.apiKey) {
+    console.error(info('DROID_API_KEY omitted by default. Use --include-secrets to export it.'));
   }
 
   for (const [key, value] of Object.entries(exportsMap)) {
