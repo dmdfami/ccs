@@ -32,7 +32,7 @@ const resources = {
         system: 'System',
         health: 'Health',
         settings: 'Settings',
-        openrouterTooltip: 'Featured: OpenRouter + Alibaba Coding Plan',
+        openrouterTooltip: 'Featured: OpenRouter + Alibaba Coding Plan + Ollama',
       },
       home: {
         profiles: 'Profiles',
@@ -1179,7 +1179,7 @@ const resources = {
         system: '系统',
         health: '健康',
         settings: '设置',
-        openrouterTooltip: '精选：OpenRouter + Alibaba Coding Plan',
+        openrouterTooltip: '精选：OpenRouter + Alibaba Coding Plan + Ollama',
       },
       home: {
         profiles: '配置',
@@ -2283,7 +2283,7 @@ const resources = {
         system: 'Hệ thống',
         health: 'Sức khỏe',
         settings: 'Cài đặt',
-        openrouterTooltip: 'Nổi bật: OpenRouter + Alibaba Coding Plan',
+        openrouterTooltip: 'Nổi bật: OpenRouter + Alibaba Coding Plan + Ollama',
       },
       home: {
         profiles: 'Hồ sơ',

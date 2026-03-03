@@ -6,7 +6,7 @@ describe('provider-presets', () => {
     const preset = getPresetById('alibaba-coding-plan');
     expect(preset?.id).toBe('alibaba-coding-plan');
     expect(preset?.baseUrl).toBe('https://coding-intl.dashscope.aliyuncs.com/apps/anthropic');
-    expect(preset?.defaultProfileName).toBe('alibaba-plan');
+    expect(preset?.defaultProfileName).toBe('albb');
   });
 
   it('resolves alibaba alias to Alibaba Coding Plan preset', () => {

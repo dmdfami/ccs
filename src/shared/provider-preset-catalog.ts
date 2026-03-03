@@ -77,7 +77,7 @@ const RAW_PROVIDER_PRESET_DEFINITIONS: readonly ProviderPresetDefinition[] = [
     name: 'Alibaba Coding Plan',
     description: 'Alibaba Cloud Coding Plan via Anthropic-compatible endpoint',
     baseUrl: 'https://coding-intl.dashscope.aliyuncs.com/apps/anthropic',
-    defaultProfileName: 'alibaba-plan',
+    defaultProfileName: 'albb',
     defaultModel: 'qwen3-coder-plus',
     apiKeyPlaceholder: 'sk-sp-...',
     apiKeyHint: 'Get your Coding Plan key from Alibaba Cloud Model Studio',
