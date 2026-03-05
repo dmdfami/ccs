@@ -156,7 +156,7 @@ Run ${color('ccs config', 'command')} for web dashboard`.trim();
       ['ccs auth --help', 'Show account management commands'],
       [
         'ccs auth create <name>',
-        'Create account profile (supports shared groups + --deeper-continuity)',
+        'Create account profile (supports --bare, shared groups, --deeper-continuity)',
       ],
       ['ccs config', 'Dashboard: Accounts table can edit context mode/group/continuity depth'],
       [
