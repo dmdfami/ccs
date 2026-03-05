@@ -58,6 +58,18 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     category: 'recommended',
     requiresApiKey: false,
   },
+  {
+    id: 'llamacpp',
+    name: 'llama.cpp (Local)',
+    description: 'Local inference via llama.cpp (LLaMA models)',
+    baseUrl: 'http://127.0.0.1:8080',
+    defaultProfileName: 'llamacpp',
+    defaultModel: 'llama3-8b',
+    apiKeyPlaceholder: 'llamacpp',
+    apiKeyHint: 'Run llama.cpp server: ./server --host 0.0.0.0 --port 8080 -m model.gguf',
+    category: 'recommended',
+    requiresApiKey: false,
+  },
   // Alternative providers
   {
     id: 'glm',
