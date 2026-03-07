@@ -1131,14 +1131,17 @@ async function main(): Promise<void> {
             console.error(fail(`Target adapter not found for "${resolvedTarget}"`));
             process.exit(1);
           }
+          const directAnthropicBaseUrl =
+            settingsEnv['ANTHROPIC_BASE_URL'] ||
+            (settingsEnv['ANTHROPIC_API_KEY'] ? 'https://api.anthropic.com' : '');
           const creds: TargetCredentials = {
             profile: profileInfo.name,
-            baseUrl: settingsEnv['ANTHROPIC_BASE_URL'] || '',
+            baseUrl: directAnthropicBaseUrl,
             apiKey: settingsEnv['ANTHROPIC_AUTH_TOKEN'] || settingsEnv['ANTHROPIC_API_KEY'] || '',
             model: settingsEnv['ANTHROPIC_MODEL'],
             provider: resolveDroidProvider({
               provider: settingsEnv['CCS_DROID_PROVIDER'] || settingsEnv['DROID_PROVIDER'],
-              baseUrl: settingsEnv['ANTHROPIC_BASE_URL'],
+              baseUrl: directAnthropicBaseUrl,
               model: settingsEnv['ANTHROPIC_MODEL'],
             }),
             reasoningOverride: droidReasoningOverride,

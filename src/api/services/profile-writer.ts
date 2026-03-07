@@ -101,6 +101,7 @@ function createSettingsFile(
     },
   };
 
+  fs.mkdirSync(ccsDir, { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf8');
 
   // Inject WebSearch hooks into profile settings

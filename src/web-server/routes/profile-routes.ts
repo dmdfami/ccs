@@ -14,7 +14,7 @@ import {
 } from '../../api/services/profile-writer';
 import { apiProfileExists, listApiProfiles } from '../../api/services/profile-reader';
 import { normalizeDroidProvider } from '../../targets/droid-provider';
-import { updateSettingsFile, parseTarget } from './route-helpers';
+import { isAnthropicDirectProfile, updateSettingsFile, parseTarget } from './route-helpers';
 
 const router = Router();
 
@@ -50,6 +50,9 @@ router.post('/', (req: Request, res: Response): void => {
   const { name, baseUrl, apiKey, model, opusModel, sonnetModel, haikuModel, target } = req.body;
   const providerHint = req.body?.droidProvider ?? req.body?.provider;
   const parsedProvider = normalizeDroidProvider(providerHint);
+  const normalizedBaseUrl = typeof baseUrl === 'string' ? baseUrl.trim() : '';
+  const normalizedApiKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+  const allowsEmptyBaseUrl = isAnthropicDirectProfile(normalizedBaseUrl, normalizedApiKey);
 
   const parsedTarget = parseTarget(target);
   if (target !== undefined && parsedTarget === null) {
@@ -63,8 +66,10 @@ router.post('/', (req: Request, res: Response): void => {
     return;
   }
 
-  if (!name || !baseUrl || !apiKey) {
-    res.status(400).json({ error: 'Missing required fields: name, baseUrl, apiKey' });
+  if (!name || !normalizedApiKey || (!normalizedBaseUrl && !allowsEmptyBaseUrl)) {
+    res.status(400).json({
+      error: 'Missing required fields: name, apiKey, and baseUrl for proxy profiles',
+    });
     return;
   }
 
@@ -86,8 +91,8 @@ router.post('/', (req: Request, res: Response): void => {
   // Create profile using unified-config-aware service
   const result = createApiProfile(
     name,
-    baseUrl,
-    apiKey,
+    normalizedBaseUrl,
+    normalizedApiKey,
     {
       default: model || '',
       opus: opusModel || model || '',
@@ -119,6 +124,8 @@ router.put('/:name', (req: Request, res: Response): void => {
   const { baseUrl, apiKey, model, opusModel, sonnetModel, haikuModel, target } = req.body;
   const providerHint = req.body?.droidProvider ?? req.body?.provider;
   const parsedProvider = normalizeDroidProvider(providerHint);
+  const normalizedBaseUrl = typeof baseUrl === 'string' ? baseUrl.trim() : baseUrl;
+  const normalizedApiKey = typeof apiKey === 'string' ? apiKey.trim() : apiKey;
 
   const parsedTarget = parseTarget(target);
   if (target !== undefined && parsedTarget === null) {
@@ -139,11 +146,7 @@ router.put('/:name', (req: Request, res: Response): void => {
   }
 
   // Validate required fields if provided (prevent setting to empty)
-  if (baseUrl !== undefined && !baseUrl.trim()) {
-    res.status(400).json({ error: 'baseUrl cannot be empty' });
-    return;
-  }
-  if (apiKey !== undefined && !apiKey.trim()) {
+  if (normalizedApiKey !== undefined && !normalizedApiKey) {
     res.status(400).json({ error: 'apiKey cannot be empty' });
     return;
   }
@@ -166,8 +169,8 @@ router.put('/:name', (req: Request, res: Response): void => {
 
     if (hasSettingsUpdates) {
       updateSettingsFile(name, {
-        baseUrl,
-        apiKey,
+        baseUrl: normalizedBaseUrl,
+        apiKey: normalizedApiKey,
         model,
         opusModel,
         sonnetModel,
