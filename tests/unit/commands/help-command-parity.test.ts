@@ -27,4 +27,17 @@ describe('help command parity', () => {
     expect(rendered.includes('ccs cliproxy quota --provider <name>')).toBe(true);
     expect(rendered.includes('ccs llamacpp')).toBe(true);
   });
+
+  test('root help documents llama.cpp as a local API profile', async () => {
+    const lines: string[] = [];
+    console.log = (...args: unknown[]) => {
+      lines.push(args.map((arg) => String(arg)).join(' '));
+    };
+
+    await handleHelpCommand();
+
+    const rendered = stripAnsi(lines.join('\n'));
+    expect(rendered.includes('ccs llamacpp')).toBe(true);
+    expect(rendered.includes('http://127.0.0.1:8080')).toBe(true);
+  });
 });
