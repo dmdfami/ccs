@@ -372,15 +372,16 @@ async function handleCreate(args: string[]): Promise<void> {
   let apiKey = parsedArgs.apiKey;
 
   if (preset?.requiresApiKey === false) {
-    // Preset doesn't require API key (e.g., local Ollama)
+    const presetLabel = preset.name;
+    const optionalApiKey = preset.apiKeyPlaceholder || preset.id;
+
     if (parsedArgs.apiKey) {
-      console.log(dim('Note: Using provided API key for local Ollama (optional)'));
+      console.log(dim(`Note: Using provided API key for ${presetLabel} (optional)`));
       apiKey = parsedArgs.apiKey;
     } else {
-      console.log(info('No API key required for local Ollama'));
-      // Sentinel value 'ollama' matches config/base-ollama.settings.json template
-      // This is not a valid API key, just a placeholder for local-only providers
-      apiKey = 'ollama';
+      console.log(info(`No API key required for ${presetLabel}`));
+      // Local providers still need a truthy auth token persisted in settings.json.
+      apiKey = optionalApiKey;
     }
   } else if (!apiKey) {
     const keyPrompt = preset?.apiKeyHint ? `API Key (${preset.apiKeyHint})` : 'API Key';

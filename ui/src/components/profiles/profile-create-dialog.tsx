@@ -38,6 +38,7 @@ import {
   PROVIDER_PRESETS,
   getPresetsByCategory,
   getPresetById,
+  resolvePresetApiKeyValue,
   type ProviderPreset,
 } from '@/lib/provider-presets';
 import {
@@ -257,8 +258,7 @@ export function ProfileCreateDialog({
     // Use user-provided baseUrl (allows customization of preset URLs)
     const finalData = {
       ...data,
-      // Use provided API key, or empty string if not provided (for optional auth providers)
-      apiKey: data.apiKey || '',
+      apiKey: resolvePresetApiKeyValue(currentPreset, data.apiKey),
     };
     try {
       await createMutation.mutateAsync(finalData);
@@ -459,7 +459,7 @@ export function ProfileCreateDialog({
                     <p className="text-xs text-destructive">{errors.apiKey.message}</p>
                   ) : currentPreset?.requiresApiKey === false ? (
                     <p className="text-xs text-muted-foreground">
-                      Only needed if you have configured Ollama authentication
+                      Only needed if your local endpoint has authentication enabled
                     </p>
                   ) : (
                     currentPreset?.apiKeyHint && (

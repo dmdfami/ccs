@@ -138,6 +138,7 @@ Run ${color('ccs config', 'command')} for web dashboard`.trim();
         'Alibaba Coding Plan (Anthropic-compatible API key)',
       ],
       ['ccs ollama', 'Local Ollama (http://localhost:11434)'],
+      ['ccs llamacpp', 'Local llama.cpp (http://127.0.0.1:8080)'],
       ['ccs ollama-cloud', 'Ollama Cloud (API key required)'],
       ['', ''], // Spacer
       ['ccs api create --preset anthropic', 'Anthropic direct API key (sk-ant-...)'],
