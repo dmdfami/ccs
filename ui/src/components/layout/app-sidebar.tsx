@@ -11,6 +11,7 @@ import {
   BarChart3,
   Gauge,
   Github,
+  Puzzle,
   TerminalSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -101,6 +102,7 @@ function buildNavGroups(t: (key: string) => string): SidebarGroupDef[] {
         },
         { path: '/copilot', icon: Github, label: t('nav.githubCopilot') },
         { path: '/cursor', iconSrc: '/assets/sidebar/cursor.svg', label: t('nav.cursorIde') },
+        { path: '/claude-extension', icon: Puzzle, label: t('nav.claudeExtension') },
         {
           path: '/accounts',
           icon: Users,
