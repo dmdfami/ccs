@@ -322,9 +322,11 @@ function getManagedKeysForTarget(
   return new Set([...currentResolvedKeys, ...manifestKeys]);
 }
 
-function getCurrentResolvedManagedKeys(setup: Awaited<ReturnType<typeof resolveClaudeExtensionSetup>>): string[] {
-  return [...new Set([...setup.removeEnvKeys, ...Object.keys(setup.extensionEnv)])].sort((left, right) =>
-    left.localeCompare(right)
+function getCurrentResolvedManagedKeys(
+  setup: Awaited<ReturnType<typeof resolveClaudeExtensionSetup>>
+): string[] {
+  return [...new Set([...setup.removeEnvKeys, ...Object.keys(setup.extensionEnv)])].sort(
+    (left, right) => left.localeCompare(right)
   );
 }
 

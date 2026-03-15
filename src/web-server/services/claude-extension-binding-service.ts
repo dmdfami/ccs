@@ -187,7 +187,9 @@ export function getClaudeExtensionBinding(id: string): ClaudeExtensionBinding {
   return toPublicBinding(binding);
 }
 
-export function getClaudeExtensionManagedEnvManifest(id: string): ClaudeExtensionManagedEnvManifest {
+export function getClaudeExtensionManagedEnvManifest(
+  id: string
+): ClaudeExtensionManagedEnvManifest {
   const binding = readBindingsStore().bindings.find((entry) => entry.id === id);
   if (!binding) {
     throw new Error(`Binding not found: ${id}`);
