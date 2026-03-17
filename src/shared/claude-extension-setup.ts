@@ -12,8 +12,10 @@ import { CLIPROXY_DEFAULT_PORT } from '../cliproxy/config/port-manager';
 import { getProxyTarget } from '../cliproxy/proxy-target-resolver';
 import { generateCopilotEnv } from '../copilot/copilot-executor';
 import InstanceManager from '../management/instance-manager';
+import SharedManager from '../management/shared-manager';
 import { expandPath } from '../utils/helpers';
 import { getClaudeSettingsPath } from '../utils/claude-config-path';
+import { isDeprecatedGlmtProfileName, normalizeDeprecatedGlmtEnv } from '../utils/glmt-deprecation';
 import {
   type ClaudeExtensionHost,
   type ClaudeExtensionHostDefinition,
@@ -86,7 +88,12 @@ function describeProfile(profileName: string, result: ProfileDetectionResult): s
   }
   if (result.type === 'cliproxy')
     return 'OAuth or CLIProxy-backed profile for Anthropic-compatible routing.';
-  if (result.type === 'settings') return 'API profile backed by a CCS settings file.';
+  if (result.type === 'settings') {
+    if (isDeprecatedGlmtProfileName(profileName)) {
+      return 'Deprecated GLMT compatibility profile normalized to the direct GLM API.';
+    }
+    return 'API profile backed by a CCS settings file.';
+  }
   if (result.type === 'account')
     return 'Claude account instance isolated through CLAUDE_CONFIG_DIR.';
   if (result.type === 'copilot') return 'GitHub Copilot profile routed through copilot-api.';
@@ -161,6 +168,7 @@ async function resolveExtensionEnv(
       profileType: result.type,
       target: 'claude',
     });
+    new SharedManager().normalizeSharedPluginMetadataPaths(continuity.claudeConfigDir);
     if (continuity.claudeConfigDir) {
       notes.push(`Default profile inherits continuity from account "${continuity.sourceAccount}".`);
       return {
@@ -182,7 +190,7 @@ async function resolveExtensionEnv(
     profileType: result.type,
     target: 'claude',
   });
-  const env =
+  let env =
     result.type === 'settings'
       ? (result.env ??
         (result.settingsPath ? loadSettingsFromFile(expandPath(result.settingsPath)) : {}))
@@ -228,12 +236,22 @@ async function resolveExtensionEnv(
               : getEffectiveEnvVars(result.provider, port, result.settingsPath);
           })();
 
+  if (result.type === 'settings' && isDeprecatedGlmtProfileName(requestedProfile)) {
+    const normalized = normalizeDeprecatedGlmtEnv(sortEnvRecord(env));
+    env = normalized.env;
+    warnings.push(...normalized.warnings);
+    notes.push('Create or migrate to a glm profile when convenient to remove legacy GLMT config.');
+  }
+
   if (!requestedIsDefault && continuity.claudeConfigDir && !env.CLAUDE_CONFIG_DIR) {
     env.CLAUDE_CONFIG_DIR = continuity.claudeConfigDir;
     notes.push(
       `Continuity inheritance adds CLAUDE_CONFIG_DIR from account "${continuity.sourceAccount}".`
     );
   }
+
+  new SharedManager().normalizeSharedPluginMetadataPaths(env.CLAUDE_CONFIG_DIR);
+
   if (result.type === 'copilot') {
     warnings.push(
       'copilot-api must stay reachable for this profile to work inside the IDE extension.'

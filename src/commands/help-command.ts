@@ -131,7 +131,6 @@ Run ${color('ccs config', 'command')} for web dashboard`.trim();
     [
       ['ccs', 'Use default Claude account'],
       ['ccs glm', 'GLM 5 (API key required)'],
-      ['ccs glmt', 'GLM with thinking mode'],
       ['ccs km', 'Kimi for Coding (API key)'],
       [
         'ccs api create --preset alibaba-coding-plan',
@@ -314,6 +313,7 @@ Run ${color('ccs config', 'command')} for web dashboard`.trim();
     ['ccs config thinking --mode auto', 'Set thinking mode'],
     ['ccs config thinking --clear-provider-override codex', 'Clear provider overrides'],
     ['ccs config --port 3000', 'Use specific port'],
+    ['ccs config --host 0.0.0.0', 'Force all-interface binding for remote devices'],
     ['ccs persist <profile>', 'Write profile setup to ~/.claude/settings.json'],
     ['ccs persist --list-backups', 'List available settings.json backups'],
     ['ccs persist --restore', 'Restore settings.json from latest backup'],

@@ -41,6 +41,19 @@ describe('help command parity', () => {
     expect(rendered.includes('http://127.0.0.1:8080')).toBe(true);
   });
 
+  test('root help no longer markets glmt as a supported profile', async () => {
+    const lines: string[] = [];
+    console.log = (...args: unknown[]) => {
+      lines.push(args.map((arg) => String(arg)).join(' '));
+    };
+
+    await handleHelpCommand();
+
+    const rendered = stripAnsi(lines.join('\n'));
+    expect(rendered.includes('ccs glmt')).toBe(false);
+    expect(rendered.includes('ccs glm')).toBe(true);
+  });
+
   test('root help documents Claude IDE extension setup surfaces', async () => {
     const lines: string[] = [];
     console.log = (...args: unknown[]) => {
@@ -57,5 +70,18 @@ describe('help command parity', () => {
     expect(rendered.includes('ccs env <profile> --format claude-extension --ide windsurf')).toBe(
       true
     );
+  });
+
+  test('root help documents dashboard host binding example', async () => {
+    const lines: string[] = [];
+    console.log = (...args: unknown[]) => {
+      lines.push(args.map((arg) => String(arg)).join(' '));
+    };
+
+    await handleHelpCommand();
+
+    const rendered = stripAnsi(lines.join('\n'));
+    expect(rendered.includes('ccs config --host 0.0.0.0')).toBe(true);
+    expect(rendered.includes('Force all-interface binding for remote devices')).toBe(true);
   });
 });
