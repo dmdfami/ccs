@@ -32,4 +32,9 @@ describe('provider-presets-novita', () => {
     const preset = getPresetById('NOVITA');
     expect(preset?.id).toBe('novita');
   });
+
+  it('does not resolve partial or invalid novita ids', () => {
+    expect(getPresetById('novita-invalid')).toBeUndefined();
+    expect(isValidPresetId('novita-invalid')).toBe(false);
+  });
 });
