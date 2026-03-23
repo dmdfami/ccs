@@ -7,6 +7,7 @@ import { resolveTargetType, stripTargetFlag } from '../../../src/targets/target-
 describe('resolveTargetType', () => {
   const originalArgv = process.argv;
   const originalDroidAliases = process.env.CCS_DROID_ALIASES;
+  const originalTargetAliases = process.env.CCS_TARGET_ALIASES;
 
   afterEach(() => {
     process.argv = originalArgv;
@@ -14,6 +15,12 @@ describe('resolveTargetType', () => {
       delete process.env.CCS_DROID_ALIASES;
     } else {
       process.env.CCS_DROID_ALIASES = originalDroidAliases;
+    }
+
+    if (originalTargetAliases === undefined) {
+      delete process.env.CCS_TARGET_ALIASES;
+    } else {
+      process.env.CCS_TARGET_ALIASES = originalTargetAliases;
     }
   });
 
@@ -52,6 +59,23 @@ describe('resolveTargetType', () => {
     expect(resolveTargetType([])).toBe('droid');
   });
 
+  it('should detect built-in ccs-droid argv[0] alias', () => {
+    process.argv = ['node', 'ccs-droid'];
+    expect(resolveTargetType([])).toBe('droid');
+  });
+
+  it('should detect custom target aliases from CCS_TARGET_ALIASES', () => {
+    process.env.CCS_TARGET_ALIASES = 'droid=droidx,my-droid';
+    process.argv = ['node', 'my-droid'];
+    expect(resolveTargetType([])).toBe('droid');
+  });
+
+  it('should ignore unsupported targets in CCS_TARGET_ALIASES', () => {
+    process.env.CCS_TARGET_ALIASES = 'codex=ccsx;droid=ccs-droid-custom';
+    process.argv = ['node', 'ccsx'];
+    expect(resolveTargetType([])).toBe('claude');
+  });
+
   it('should detect custom argv[0] aliases from CCS_DROID_ALIASES', () => {
     process.env.CCS_DROID_ALIASES = 'droidx,my-droid';
     process.argv = ['node', 'my-droid'];
@@ -75,6 +99,11 @@ describe('resolveTargetType', () => {
     expect(resolveTargetType([])).toBe('droid');
   });
 
+  it('should strip .cmd extension on built-in explicit alias', () => {
+    process.argv = ['node', 'ccs-droid.cmd'];
+    expect(resolveTargetType([])).toBe('droid');
+  });
+
   it('should strip .bat extension on Windows argv[0]', () => {
     process.argv = ['node', 'ccsd.bat'];
     expect(resolveTargetType([])).toBe('droid');
@@ -92,6 +121,11 @@ describe('resolveTargetType', () => {
 
   it('should handle full path argv[0]', () => {
     process.argv = ['node', '/usr/local/bin/ccsd'];
+    expect(resolveTargetType([])).toBe('droid');
+  });
+
+  it('should handle full path argv[0] for ccs-droid', () => {
+    process.argv = ['node', '/usr/local/bin/ccs-droid'];
     expect(resolveTargetType([])).toBe('droid');
   });
 

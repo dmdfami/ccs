@@ -12,27 +12,76 @@ import * as path from 'path';
 import { TargetType } from './target-adapter';
 
 /**
- * Map of binary names to target types (busybox pattern).
- * When CCS is invoked as `ccsd`, it auto-selects the droid target.
+ * Built-in argv[0] aliases for explicit runtime entrypoints.
+ * `ccs-droid` is the transparent alias; `ccsd` remains as a legacy shortcut.
  */
-const ARGV0_TARGET_MAP: Record<string, TargetType> = {
+const BUILTIN_ARGV0_TARGET_MAP: Record<string, TargetType> = {
+  'ccs-droid': 'droid',
   ccsd: 'droid',
 };
 const ALIAS_NAME_REGEX = /^[a-z0-9._-]+$/;
+const GENERIC_TARGET_ALIAS_ENV_VAR = 'CCS_TARGET_ALIASES';
+const LEGACY_TARGET_ALIAS_ENV_VARS: Partial<Record<TargetType, string>> = {
+  droid: 'CCS_DROID_ALIASES',
+};
 
-function buildArgv0TargetMap(): Record<string, TargetType> {
-  const map: Record<string, TargetType> = { ...ARGV0_TARGET_MAP };
-  const envAliases = process.env['CCS_DROID_ALIASES'];
-  if (!envAliases) {
-    return map;
+function addAliasToMap(map: Record<string, TargetType>, alias: string, target: TargetType): void {
+  const normalizedAlias = alias.trim().toLowerCase();
+  if (!normalizedAlias || !ALIAS_NAME_REGEX.test(normalizedAlias)) {
+    return;
   }
 
-  for (const rawAlias of envAliases.split(',')) {
-    const alias = rawAlias.trim().toLowerCase();
-    if (!alias || !ALIAS_NAME_REGEX.test(alias)) {
+  map[normalizedAlias] = target;
+}
+
+function addAliasListToMap(
+  map: Record<string, TargetType>,
+  target: TargetType,
+  rawAliases: string
+): void {
+  for (const rawAlias of rawAliases.split(',')) {
+    addAliasToMap(map, rawAlias, target);
+  }
+}
+
+function parseGenericTargetAliasConfig(map: Record<string, TargetType>, rawConfig: string): void {
+  for (const rawEntry of rawConfig.split(';')) {
+    const entry = rawEntry.trim();
+    if (!entry) {
       continue;
     }
-    map[alias] = 'droid';
+
+    const separatorIndex = entry.indexOf('=');
+    if (separatorIndex <= 0 || separatorIndex === entry.length - 1) {
+      continue;
+    }
+
+    const rawTarget = entry.slice(0, separatorIndex).trim().toLowerCase();
+    const rawAliases = entry.slice(separatorIndex + 1).trim();
+    if (!rawAliases || !isValidTarget(rawTarget)) {
+      continue;
+    }
+
+    addAliasListToMap(map, rawTarget, rawAliases);
+  }
+}
+
+function buildArgv0TargetMap(): Record<string, TargetType> {
+  const map: Record<string, TargetType> = { ...BUILTIN_ARGV0_TARGET_MAP };
+  const genericAliasConfig = process.env[GENERIC_TARGET_ALIAS_ENV_VAR];
+  if (genericAliasConfig) {
+    parseGenericTargetAliasConfig(map, genericAliasConfig);
+  }
+
+  for (const [target, envVar] of Object.entries(LEGACY_TARGET_ALIAS_ENV_VARS) as Array<
+    [TargetType, string]
+  >) {
+    const rawAliases = process.env[envVar];
+    if (!rawAliases) {
+      continue;
+    }
+
+    addAliasListToMap(map, target, rawAliases);
   }
 
   return map;

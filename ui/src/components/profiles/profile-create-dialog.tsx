@@ -524,11 +524,25 @@ export function ProfileCreateDialog({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Run with{' '}
-                    <code className="bg-muted px-1 rounded text-[10px]">
-                      {targetValue === 'droid' ? 'ccsd' : 'ccs'}
-                    </code>{' '}
-                    by default. You can still override each run with{' '}
+                    {targetValue === 'droid' ? (
+                      <>
+                        Preferred explicit alias:{' '}
+                        <code className="bg-muted px-1 rounded text-[10px]">ccs-droid</code>.
+                      </>
+                    ) : (
+                      <>
+                        Run with <code className="bg-muted px-1 rounded text-[10px]">ccs</code> by
+                        default.
+                      </>
+                    )}
+                    {targetValue === 'droid' ? (
+                      <>
+                        {' '}
+                        Legacy <code className="bg-muted px-1 rounded text-[10px]">ccsd</code> still
+                        works for Droid.
+                      </>
+                    ) : null}{' '}
+                    You can still override each run with{' '}
                     <code className="bg-muted px-1 rounded text-[10px]">--target</code>.
                   </p>
                 </div>

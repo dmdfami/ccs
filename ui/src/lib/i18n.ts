@@ -1451,10 +1451,8 @@ const resources = {
         openrouterModelsBadge: '{{modelCountLabel}} 个 OpenRouter 模型',
         runtimeProviderBadge: '运行时提供商设置',
         runtimeProviderTitle: '打开 AI Providers',
-        runtimeProviderDescription:
-          '先管理共享的提供商密钥和运行时连接器，再创建独立的 API 配置。',
-        runtimeProviderFeatureConnectors:
-          'Gemini、Codex、Claude、Vertex 以及 OpenAI 兼容连接器',
+        runtimeProviderDescription: '先管理共享的提供商密钥和运行时连接器，再创建独立的 API 配置。',
+        runtimeProviderFeatureConnectors: 'Gemini、Codex、Claude、Vertex 以及 OpenAI 兼容连接器',
         runtimeProviderFeatureSecrets: '共享密钥与单个 API 配置分离存放',
         runtimeProviderFooter: '当多个配置需要共享同一提供商设置时最适合使用。',
         createOpenRouterProfile: '创建 OpenRouter 配置',
@@ -3837,8 +3835,7 @@ const resources = {
         runtimeProviderTitle: 'AI Providers を開く',
         runtimeProviderDescription:
           '個別の API プロファイルを作成する前に、共有プロバイダーキーとランタイムコネクタを管理します。',
-        runtimeProviderFeatureConnectors:
-          'Gemini、Codex、Claude、Vertex、OpenAI 互換コネクタ',
+        runtimeProviderFeatureConnectors: 'Gemini、Codex、Claude、Vertex、OpenAI 互換コネクタ',
         runtimeProviderFeatureSecrets:
           '共有シークレットを個別の API プロファイルから切り離して管理',
         runtimeProviderFooter:

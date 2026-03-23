@@ -90,11 +90,7 @@ export function ProviderInfoTab({
             <UsageCommand label="Run with prompt" command={`ccs ${provider} "your prompt"`} />
             <UsageCommand
               label={isDroidTarget ? 'Droid alias (explicit)' : 'Run on Droid'}
-              command={
-                isDroidTarget
-                  ? `ccsd ${provider} "your prompt"`
-                  : `ccs ${provider} --target droid "your prompt"`
-              }
+              command={`ccs-droid ${provider} "your prompt"`}
             />
             <UsageCommand
               label={isDroidTarget ? 'Override to Claude' : 'Override target'}

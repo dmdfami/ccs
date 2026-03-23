@@ -194,16 +194,25 @@ ccs api export glm --out ./glm.ccs-profile.json  # Export for cross-device trans
 ccs api import ./glm.ccs-profile.json        # Import exported profile bundle
 ```
 
-### Droid Alias (`argv[0]` pattern)
+### Runtime Aliases (`argv[0]` pattern)
 
-By default, invoking CCS as `ccsd` auto-selects the Droid target:
+Built-in Droid runtime aliases:
 
 ```bash
+ln -s "$(command -v ccs)" /usr/local/bin/ccs-droid
 ln -s "$(command -v ccs)" /usr/local/bin/ccsd
-ccsd glm
+ccs-droid glm   # explicit alias
+ccsd glm        # legacy shortcut
 ```
 
-Need additional alias names? Set `CCS_DROID_ALIASES` as a comma-separated list (for example: `CCS_DROID_ALIASES=ccs-droid,mydroid`).
+Need additional alias names? Use `CCS_TARGET_ALIASES` (preferred) or keep using
+legacy `CCS_DROID_ALIASES`:
+
+```bash
+CCS_TARGET_ALIASES='droid=mydroid,team-droid'
+# Legacy fallback still supported:
+CCS_DROID_ALIASES='mydroid,team-droid'
+```
 
 For Factory BYOK compatibility, CCS also stores a per-profile Droid provider hint
 (`CCS_DROID_PROVIDER`) using one of:
@@ -217,9 +226,9 @@ which Droid treats as queued prompt text.
 CCS supports structural Droid command passthrough after profile selection:
 
 ```bash
-ccsd codex exec --skip-permissions-unsafe "fix failing tests"
-ccsd codex --skip-permissions-unsafe "fix failing tests"   # auto-routed to: droid exec ...
-ccsd codex -m custom:gpt-5.3-codex "fix failing tests"     # short exec flags auto-routed too
+ccs-droid codex exec --skip-permissions-unsafe "fix failing tests"
+ccs-droid codex --skip-permissions-unsafe "fix failing tests"   # auto-routed to: droid exec ...
+ccs-droid codex -m custom:gpt-5.3-codex "fix failing tests"     # short exec flags auto-routed too
 ```
 
 If you pass exec-only flags without a prompt (for example `--skip-permissions-unsafe`),
@@ -245,10 +254,10 @@ ccs cliproxy create mycodex --provider codex --target droid
 Built-in CLIProxy providers also work with Droid alias/target override:
 
 ```bash
-ccsd codex
-ccsd agy
+ccs-droid codex
+ccs-droid agy
 ccs codex --target droid
-ccsd codex exec --auto high "triage this bug report"
+ccs-droid codex exec --auto high "triage this bug report"
 ```
 
 Dashboard parity:
