@@ -119,9 +119,7 @@ function rememberManualAuthState(
   });
 }
 
-function getManualAuthState(
-  state: string | undefined
-): {
+function getManualAuthState(state: string | undefined): {
   nickname?: string;
   expectedAccountId?: string;
   createdAt: number;
