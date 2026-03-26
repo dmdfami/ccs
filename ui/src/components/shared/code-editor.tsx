@@ -156,12 +156,16 @@ export function CodeEditor({
   );
 
   return (
-    <div className={cn('flex min-h-0 flex-col', className)}>
+    <div
+      className={cn('flex min-h-0 flex-col', isFillParent && 'h-full', className)}
+      style={isFillParent ? { height: minHeight === 'auto' ? undefined : minHeight } : undefined}
+    >
       {/* Editor container */}
       <div
         className={cn(
           'relative rounded-md border overflow-hidden',
           'bg-muted/30',
+          isFillParent && 'flex min-h-0 flex-1 flex-col',
           isFocused && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
           readonly && 'opacity-70 cursor-not-allowed',
           !validation.valid && 'border-destructive'
@@ -169,8 +173,7 @@ export function CodeEditor({
         data-slot="code-editor-surface"
       >
         <div
-          className={cn(isFillParent && 'min-h-0 overflow-auto')}
-          style={isFillParent ? { height: minHeight === 'auto' ? '100%' : minHeight } : undefined}
+          className={cn(isFillParent && 'scrollbar-editor min-h-0 flex-1 overflow-auto')}
           data-slot={isFillParent ? 'code-editor-viewport' : undefined}
         >
           <Editor
