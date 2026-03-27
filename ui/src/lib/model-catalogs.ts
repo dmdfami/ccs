@@ -6,6 +6,13 @@
 import type { ProviderCatalog } from '@/components/cliproxy/provider-model-selector';
 import { stripModelConfigurationSuffixes } from '@/lib/extended-context-utils';
 
+const GEMINI_MINOR_VERSION_COMPATIBILITY_IDS = Object.freeze({
+  'gemini-3-pro-preview': 'gemini-3.1-pro-preview',
+  'gemini-3.1-pro-preview': 'gemini-3-pro-preview',
+  'gemini-3-flash-preview': 'gemini-3.1-flash-preview',
+  'gemini-3.1-flash-preview': 'gemini-3-flash-preview',
+});
+
 /** Model catalog data - mirrors src/cliproxy/model-catalog.ts */
 export const MODEL_CATALOGS: Record<string, ProviderCatalog> = {
   agy: {
@@ -39,26 +46,26 @@ export const MODEL_CATALOGS: Record<string, ProviderCatalog> = {
         },
       },
       {
-        id: 'gemini-3-pro-preview',
-        name: 'Gemini 3 Pro',
-        description: 'Google latest model via Antigravity',
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro',
+        description: 'Google latest Gemini Pro model via Antigravity',
         extendedContext: true,
         presetMapping: {
-          default: 'gemini-3-pro-preview',
-          opus: 'gemini-3-pro-preview',
-          sonnet: 'gemini-3-pro-preview',
+          default: 'gemini-3.1-pro-preview',
+          opus: 'gemini-3.1-pro-preview',
+          sonnet: 'gemini-3.1-pro-preview',
           haiku: 'gemini-3-flash-preview',
         },
       },
       {
         id: 'gemini-3-flash-preview',
-        name: 'Gemini 3 Flash',
-        description: 'Fast Gemini model via Antigravity',
+        name: 'Gemini Flash',
+        description: 'Fast Gemini model via Antigravity with 3/3.1 Flash rollout compatibility',
         extendedContext: true,
         presetMapping: {
           default: 'gemini-3-flash-preview',
-          opus: 'gemini-3-pro-preview',
-          sonnet: 'gemini-3-pro-preview',
+          opus: 'gemini-3.1-pro-preview',
+          sonnet: 'gemini-3.1-pro-preview',
           haiku: 'gemini-3-flash-preview',
         },
       },
@@ -70,28 +77,28 @@ export const MODEL_CATALOGS: Record<string, ProviderCatalog> = {
     defaultModel: 'gemini-2.5-pro',
     models: [
       {
-        id: 'gemini-3-pro-preview',
-        name: 'Gemini 3 Pro',
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro',
         tier: 'paid',
-        description: 'Latest model, requires paid Google account',
+        description: 'Latest Gemini Pro model, requires paid Google account',
         extendedContext: true,
         presetMapping: {
-          default: 'gemini-3-pro-preview',
-          opus: 'gemini-3-pro-preview',
-          sonnet: 'gemini-3-pro-preview',
+          default: 'gemini-3.1-pro-preview',
+          opus: 'gemini-3.1-pro-preview',
+          sonnet: 'gemini-3.1-pro-preview',
           haiku: 'gemini-3-flash-preview',
         },
       },
       {
         id: 'gemini-3-flash-preview',
-        name: 'Gemini 3 Flash',
+        name: 'Gemini Flash',
         tier: 'paid',
-        description: 'Fast Gemini 3 model, requires paid Google account',
+        description: 'Fast Gemini model, requires paid Google account and tracks 3/3.1 Flash IDs',
         extendedContext: true,
         presetMapping: {
           default: 'gemini-3-flash-preview',
-          opus: 'gemini-3-pro-preview',
-          sonnet: 'gemini-3-pro-preview',
+          opus: 'gemini-3.1-pro-preview',
+          sonnet: 'gemini-3.1-pro-preview',
           haiku: 'gemini-3-flash-preview',
         },
       },
@@ -560,7 +567,14 @@ export function findCatalogModel(provider: string, modelId: string) {
   if (!catalog) return undefined;
 
   const normalizedModelId = stripModelConfigurationSuffixes(modelId);
-  return catalog.models.find((model) => model.id === normalizedModelId);
+  const compatibilityModelId =
+    GEMINI_MINOR_VERSION_COMPATIBILITY_IDS[
+      normalizedModelId.toLowerCase() as keyof typeof GEMINI_MINOR_VERSION_COMPATIBILITY_IDS
+    ];
+
+  return catalog.models.find(
+    (model) => model.id === normalizedModelId || model.id === compatibilityModelId
+  );
 }
 
 export function supportsExtendedContext(provider: string, modelId: string): boolean {

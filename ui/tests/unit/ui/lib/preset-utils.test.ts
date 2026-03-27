@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MODEL_CATALOGS } from '@/lib/model-catalogs';
+import { MODEL_CATALOGS, findCatalogModel } from '@/lib/model-catalogs';
 import { applyDefaultPreset } from '@/lib/preset-utils';
 
 describe('claude preset utils', () => {
@@ -40,5 +40,17 @@ describe('claude preset utils', () => {
       ANTHROPIC_DEFAULT_SONNET_MODEL: 'claude-sonnet-4-6',
       ANTHROPIC_DEFAULT_HAIKU_MODEL: 'claude-haiku-4-5-20251001',
     });
+  });
+
+  it('keeps Gemini presets on 3.1 Pro while resolving 3/3.1 alias variants', () => {
+    const geminiCatalog = MODEL_CATALOGS.gemini;
+    const latestPro = geminiCatalog.models.find((model) => model.id === 'gemini-3.1-pro-preview');
+
+    expect(latestPro?.name).toBe('Gemini 3.1 Pro');
+    expect(latestPro?.presetMapping?.default).toBe('gemini-3.1-pro-preview');
+    expect(findCatalogModel('gemini', 'gemini-3-pro-preview')?.id).toBe('gemini-3.1-pro-preview');
+    expect(findCatalogModel('gemini', 'gemini-3.1-flash-preview')?.id).toBe(
+      'gemini-3-flash-preview'
+    );
   });
 });

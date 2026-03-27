@@ -716,7 +716,7 @@ export async function execClaudeWithCLIProxy(
       const issueUrl = getModelIssueUrl(provider, currentModel);
       console.error('');
       console.error(warn(`${modelEntry?.name || currentModel} has known issues with Claude Code`));
-      console.error('    Tool calls will fail. Use "gemini-3-pro-preview" instead.');
+      console.error('    Tool calls will fail. Use "gemini-3.1-pro-preview" instead.');
       if (issueUrl) {
         console.error(`    Tracking: ${issueUrl}`);
       }

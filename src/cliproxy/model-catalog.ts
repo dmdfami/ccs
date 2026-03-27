@@ -11,6 +11,14 @@ import {
   migrateDeniedAntigravityModelAliases,
   normalizeModelIdForProvider,
 } from './model-id-normalizer';
+import { stripModelConfigurationSuffixes } from '../shared/extended-context-utils';
+
+const GEMINI_MINOR_VERSION_COMPATIBILITY_IDS = Object.freeze({
+  'gemini-3-pro-preview': 'gemini-3.1-pro-preview',
+  'gemini-3.1-pro-preview': 'gemini-3-pro-preview',
+  'gemini-3-flash-preview': 'gemini-3.1-flash-preview',
+  'gemini-3.1-flash-preview': 'gemini-3-flash-preview',
+});
 
 /**
  * Thinking support configuration for a model.
@@ -108,9 +116,9 @@ export const MODEL_CATALOG: Partial<Record<CLIProxyProvider, ProviderCatalog>> =
         },
       },
       {
-        id: 'gemini-3-pro-preview',
-        name: 'Gemini 3 Pro',
-        description: 'Google latest model via Antigravity',
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro',
+        description: 'Google latest Gemini Pro model via Antigravity',
         thinking: { type: 'levels', levels: ['low', 'high'], dynamicAllowed: true },
         extendedContext: true,
       },
@@ -122,10 +130,10 @@ export const MODEL_CATALOG: Partial<Record<CLIProxyProvider, ProviderCatalog>> =
     defaultModel: 'gemini-2.5-pro',
     models: [
       {
-        id: 'gemini-3-pro-preview',
-        name: 'Gemini 3 Pro',
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro',
         tier: 'pro',
-        description: 'Latest model, requires paid Google account',
+        description: 'Latest Gemini Pro model, requires paid Google account',
         thinking: { type: 'levels', levels: ['low', 'high'], dynamicAllowed: true },
         extendedContext: true,
       },
@@ -390,7 +398,7 @@ export function getProviderCatalog(provider: CLIProxyProvider): ProviderCatalog 
 export function findModel(provider: CLIProxyProvider, modelId: string): ModelEntry | undefined {
   const catalog = MODEL_CATALOG[provider];
   if (!catalog || !modelId) return undefined;
-  const normalizedId = modelId.trim().toLowerCase();
+  const normalizedId = stripModelConfigurationSuffixes(modelId).trim().toLowerCase();
   const providerNormalizedId = normalizeModelIdForProvider(normalizedId, provider)
     .trim()
     .toLowerCase();
@@ -402,6 +410,16 @@ export function findModel(provider: CLIProxyProvider, modelId: string): ModelEnt
       .toLowerCase();
     lookupCandidates.add(migratedRaw);
     lookupCandidates.add(migratedProvider);
+  }
+
+  for (const candidate of [...lookupCandidates]) {
+    const compatibilityId =
+      GEMINI_MINOR_VERSION_COMPATIBILITY_IDS[
+        candidate as keyof typeof GEMINI_MINOR_VERSION_COMPATIBILITY_IDS
+      ];
+    if (compatibilityId) {
+      lookupCandidates.add(compatibilityId);
+    }
   }
 
   return catalog.models.find((m) => lookupCandidates.has(m.id.toLowerCase()));
