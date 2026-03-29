@@ -45,7 +45,7 @@ function runCodexProbe(codexPath: string, args: string[]): string | undefined {
   }
 }
 
-function readCodexVersion(codexPath: string): string | undefined {
+export function readCodexVersion(codexPath: string): string | undefined {
   return runCodexProbe(codexPath, ['--version'])?.trim();
 }
 
