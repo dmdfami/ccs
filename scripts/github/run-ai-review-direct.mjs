@@ -283,7 +283,7 @@ export async function writeDirectReviewFromEnv(env = process.env, fetchImpl = gl
       const responseJson = await postReviewRequest({
         apiUrl: cleanText(env.ANTHROPIC_BASE_URL),
         apiKey: cleanText(env.ANTHROPIC_AUTH_TOKEN),
-        model: cleanText(env.REVIEW_MODEL || env.ANTHROPIC_MODEL || 'glm-5.1'),
+        model: cleanText(env.REVIEW_MODEL || env.ANTHROPIC_MODEL || 'glm-5-turbo'),
         system,
         prompt: attemptPrompt,
         timeoutMs: attemptWindow.timeoutMs,
@@ -318,11 +318,11 @@ export async function writeDirectReviewFromEnv(env = process.env, fetchImpl = gl
 
   const markdown = finalValidation
     ? renderStructuredReview(finalValidation, {
-        model: cleanText(env.REVIEW_MODEL || 'glm-5.1'),
+        model: cleanText(env.REVIEW_MODEL || 'glm-5-turbo'),
         rendering,
       })
     : renderIncompleteReview({
-        model: cleanText(env.REVIEW_MODEL || 'glm-5.1'),
+        model: cleanText(env.REVIEW_MODEL || 'glm-5-turbo'),
         reason: lastReason,
         runUrl: cleanText(env.AI_REVIEW_RUN_URL || '#'),
         selectedFiles: coveredSelectedFiles,

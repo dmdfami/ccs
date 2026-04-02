@@ -60,7 +60,7 @@ describe('run-ai-review-direct', () => {
         {
           ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic',
           ANTHROPIC_AUTH_TOKEN: 'test-token',
-          REVIEW_MODEL: 'glm-5.1',
+          REVIEW_MODEL: 'glm-5-turbo',
           GITHUB_REPOSITORY: 'kaitranntt/ccs',
           AI_REVIEW_PROMPT: 'You are a reviewer.',
           AI_REVIEW_PACKET_FILE: packetFile,
@@ -110,7 +110,7 @@ describe('run-ai-review-direct', () => {
         {
           ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic',
           ANTHROPIC_AUTH_TOKEN: 'test-token',
-          REVIEW_MODEL: 'glm-5.1',
+          REVIEW_MODEL: 'glm-5-turbo',
           GITHUB_REPOSITORY: 'kaitranntt/ccs',
           AI_REVIEW_PROMPT: 'You are a reviewer.',
           AI_REVIEW_PACKET_FILE: packetFile,
@@ -147,11 +147,9 @@ describe('run-ai-review-direct', () => {
       );
 
       expect(result.usedFallback).toBe(false);
-      expect(fs.readFileSync(outputFile, 'utf8')).toContain('### 📋 Summary');
+      expect(fs.readFileSync(outputFile, 'utf8')).toContain('### Verdict');
       expect(fs.readFileSync(outputFile, 'utf8')).toContain('**✅ APPROVED**');
-      expect(fs.readFileSync(outputFile, 'utf8')).toContain(
-        'packet 1/1 selected files included in the final review packet'
-      );
+      expect(fs.readFileSync(outputFile, 'utf8')).toContain('packet 1/1');
       expect(JSON.parse(fs.readFileSync(logFile, 'utf8')).attempts).toHaveLength(1);
     });
   });
@@ -171,7 +169,7 @@ describe('run-ai-review-direct', () => {
         {
           ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic',
           ANTHROPIC_AUTH_TOKEN: 'test-token',
-          REVIEW_MODEL: 'glm-5.1',
+          REVIEW_MODEL: 'glm-5-turbo',
           GITHUB_REPOSITORY: 'kaitranntt/ccs',
           AI_REVIEW_PROMPT: 'You are a reviewer.',
           AI_REVIEW_PACKET_FILE: packetFile,
@@ -263,7 +261,7 @@ describe('run-ai-review-direct', () => {
         {
           ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic',
           ANTHROPIC_AUTH_TOKEN: 'test-token',
-          REVIEW_MODEL: 'glm-5.1',
+          REVIEW_MODEL: 'glm-5-turbo',
           GITHUB_REPOSITORY: 'kaitranntt/ccs',
           AI_REVIEW_PROMPT: 'You are a reviewer.',
           AI_REVIEW_PACKET_FILE: packetFile,
@@ -289,9 +287,7 @@ describe('run-ai-review-direct', () => {
 
       expect(result.usedFallback).toBe(false);
       expect(fs.readFileSync(outputFile, 'utf8')).toContain('**⚠️ APPROVED WITH NOTES**');
-      expect(fs.readFileSync(outputFile, 'utf8')).toContain(
-        'packet 2/3 selected files included in the final review packet; 1 selected file omitted for packet budget'
-      );
+      expect(fs.readFileSync(outputFile, 'utf8')).toContain('packet 2/3');
       expect(JSON.parse(fs.readFileSync(logFile, 'utf8')).attempts).toHaveLength(2);
     });
   });

@@ -196,12 +196,12 @@ jobs:
     # GLM API environment for model routing
     env:
       ANTHROPIC_BASE_URL: https://api.z.ai/api/anthropic
-      REVIEW_MODEL: glm-5.1
+      REVIEW_MODEL: glm-5-turbo
       ANTHROPIC_AUTH_TOKEN: ${{ secrets.GLM_API_KEY }}
-      ANTHROPIC_MODEL: glm-5.1
-      ANTHROPIC_DEFAULT_OPUS_MODEL: glm-5.1
-      ANTHROPIC_DEFAULT_SONNET_MODEL: glm-5.1
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: GLM-4.7-FlashX
+      ANTHROPIC_MODEL: glm-5-turbo
+      ANTHROPIC_DEFAULT_OPUS_MODEL: glm-5-turbo
+      ANTHROPIC_DEFAULT_SONNET_MODEL: glm-5-turbo
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: glm-5-turbo
       DISABLE_BUG_COMMAND: '1'
       DISABLE_ERROR_REPORTING: '1'
       DISABLE_TELEMETRY: '1'

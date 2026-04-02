@@ -52,21 +52,22 @@ describe('normalize-ai-review-output', () => {
     );
 
     expect(validation.ok).toBe(true);
-    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5.1' });
+    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5-turbo' });
 
-    expect(markdown).toContain('### 📋 Summary');
-    expect(markdown).toContain('### 🔴 High');
+    expect(markdown).toContain('### Verdict');
+    expect(markdown).toContain('### Top Findings');
+    expect(markdown).toContain('- 🔴 High `src/cliproxy/accounts/query.ts:61` — Ambiguous account lookup drops valid matches');
+    expect(markdown).toContain('<summary>Full Findings (1)</summary>');
     expect(markdown).toContain('**`src/cliproxy/accounts/query.ts:61` — Ambiguous account lookup drops valid matches**');
-    expect(markdown).toContain('### 🔒 Security Checklist');
+    expect(markdown).toContain('<summary>Security Checklist (1)</summary>');
     expect(markdown).toContain('| Injection safety | ✅ | No user-controlled input reaches a shell, SQL, or HTML boundary in this diff. |');
-    expect(markdown).toContain('### 📊 CCS Compliance');
+    expect(markdown).toContain('<summary>CCS Compliance (1)</summary>');
     expect(markdown).toContain('| No emojis in CLI | N/A | This change affects GitHub PR comments only, not CLI stdout. |');
-    expect(markdown).toContain('### 💡 Informational');
-    expect(markdown).toContain('### ✅ What\'s Done Well');
-    expect(markdown).toContain('### 🎯 Overall Assessment');
+    expect(markdown).toContain('<summary>Informational (1)</summary>');
+    expect(markdown).toContain("<summary>What's Done Well (1)</summary>");
     expect(markdown).toContain('**❌ CHANGES REQUESTED**');
     expect(markdown).toContain('Why it matters: That breaks normal selection flows for users with multiple Codex sessions.');
-    expect(markdown).toContain('> 🤖 Reviewed by `glm-5.1`');
+    expect(markdown).toContain('> 🤖 Reviewed by `glm-5-turbo`');
   });
 
   test('renders mode-aware review context metadata without changing the structured review contract', () => {
@@ -97,7 +98,7 @@ describe('normalize-ai-review-output', () => {
 
     expect(validation.ok).toBe(true);
     const markdown = reviewOutput.renderStructuredReview(validation.value, {
-      model: 'glm-5.1',
+      model: 'glm-5-turbo',
       rendering: {
         mode: 'triage',
         selectedFiles: 8,
@@ -113,7 +114,7 @@ describe('normalize-ai-review-output', () => {
     });
 
     expect(markdown).toContain(
-      '> 🧭 Review context: mode `triage`; expanded packaged review with broader coverage; scope 8/34 reviewable files; 620/2140 reviewable changed lines; packet 6/8 selected files included in the final review packet; 2 selected files omitted for packet budget; turn budget 6 turns; workflow cap 5 minutes.'
+      '> 🧭 `triage` • 8/34 files • 620/2140 lines • packet 6/8 • 6 turns / 5 minutes'
     );
     expect(markdown).toContain('**⚠️ APPROVED WITH NOTES**');
   });
@@ -157,7 +158,7 @@ describe('normalize-ai-review-output', () => {
     );
 
     expect(validation.ok).toBe(true);
-    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5.1' });
+    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5-turbo' });
 
     expect(markdown).toContain('`buildReviewScope(files, mode)`');
     expect(markdown).toContain('`.github/workflows/ai-review.yml`');
@@ -200,7 +201,7 @@ describe('normalize-ai-review-output', () => {
     );
 
     expect(validation.ok).toBe(true);
-    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5.1' });
+    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5-turbo' });
 
     expect(markdown).toContain('Evidence: Current publish branch');
     expect(markdown).toContain('```bash');
@@ -242,7 +243,7 @@ describe('normalize-ai-review-output', () => {
     expect(validation.ok).toBe(true);
     expect(validation.value.findings[0].snippets[0].code).toBe('    if value:\n        print(value)');
 
-    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5.1' });
+    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5-turbo' });
     expect(markdown).toContain('    if value:');
     expect(markdown).toContain('        print(value)');
   });
@@ -300,7 +301,7 @@ describe('normalize-ai-review-output', () => {
 
       const result = reviewOutput.writeReviewFromEnv({
         AI_REVIEW_EXECUTION_FILE: executionFile,
-        AI_REVIEW_MODEL: 'glm-5.1',
+        AI_REVIEW_MODEL: 'glm-5-turbo',
         AI_REVIEW_MODE: 'triage',
         AI_REVIEW_SELECTED_FILES: '10',
         AI_REVIEW_REVIEWABLE_FILES: '46',
@@ -363,7 +364,7 @@ describe('normalize-ai-review-output', () => {
 
       const result = reviewOutput.writeReviewFromEnv({
         AI_REVIEW_EXECUTION_FILE: executionFile,
-        AI_REVIEW_MODEL: 'glm-5.1',
+        AI_REVIEW_MODEL: 'glm-5-turbo',
         AI_REVIEW_MODE: 'fast',
         AI_REVIEW_SELECTED_FILES: '6',
         AI_REVIEW_REVIEWABLE_FILES: '52',
@@ -410,7 +411,7 @@ describe('normalize-ai-review-output', () => {
 
       const result = reviewOutput.writeReviewFromEnv({
         AI_REVIEW_EXECUTION_FILE: executionFile,
-        AI_REVIEW_MODEL: 'glm-5.1',
+        AI_REVIEW_MODEL: 'glm-5-turbo',
         AI_REVIEW_OUTPUT_FILE: outputFile,
         AI_REVIEW_RUN_URL: 'https://github.com/kaitranntt/ccs/actions/runs/1',
         AI_REVIEW_STRUCTURED_OUTPUT: JSON.stringify({
@@ -507,15 +508,15 @@ describe('normalize-ai-review-output', () => {
     );
 
     expect(validation.ok).toBe(true);
-    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5.1' });
+    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5-turbo' });
 
-    expect(markdown).toContain('### 🔍 Findings');
+    expect(markdown).toContain('### Top Findings');
     expect(markdown).toContain('No confirmed issues found after reviewing the diff and surrounding code.');
-    expect(markdown).toContain('### 🔒 Security Checklist');
+    expect(markdown).toContain('<summary>Security Checklist (1)</summary>');
     expect(markdown).toContain(
       '| Injection safety | ✅ | No user-controlled data crosses a risky boundary in the reviewed diff. |'
     );
-    expect(markdown).toContain('### 📊 CCS Compliance');
+    expect(markdown).toContain('<summary>CCS Compliance (1)</summary>');
     expect(markdown).toContain('| Help/docs alignment | N/A | No CLI behavior changed, so there was nothing to update. |');
     expect(markdown).toContain('**✅ APPROVED** — No confirmed regressions or missing verification remain.');
   });
@@ -545,7 +546,7 @@ describe('normalize-ai-review-output', () => {
     );
 
     expect(validation.ok).toBe(true);
-    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5.1' });
+    const markdown = reviewOutput.renderStructuredReview(validation.value, { model: 'glm-5-turbo' });
 
     expect(markdown).toContain(
       '**`tests/unit/scripts/github/normalize-ai-review-output.test.ts` — Missing empty-state coverage**'
@@ -575,7 +576,7 @@ describe('normalize-ai-review-output', () => {
         overallAssessment: 'approved_with_notes',
         overallRationale: 'This is a formatting-only follow-up.',
       },
-      { model: 'glm-5.1' }
+      { model: 'glm-5-turbo' }
     );
 
     expect(markdown).toContain('**``src/weird`path.ts`` — Backtick-safe locations stay readable**');

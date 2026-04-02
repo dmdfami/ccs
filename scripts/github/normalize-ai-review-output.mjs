@@ -14,6 +14,11 @@ const SEVERITY_HEADERS = {
   medium: '### 🟡 Medium',
   low: '### 🟢 Low',
 };
+const SEVERITY_SUMMARY_LABELS = {
+  high: '🔴 High',
+  medium: '🟡 Medium',
+  low: '🟢 Low',
+};
 
 const STATUS_LABELS = {
   pass: '✅',
@@ -41,6 +46,7 @@ const CODE_BLOCK_LANGUAGE_PATTERN = /^[A-Za-z0-9#+.-]{1,20}$/u;
 const MAX_FINDING_SNIPPETS = 2;
 const MAX_SNIPPET_LINES = 20;
 const MAX_SNIPPET_CHARACTERS = 1200;
+const TOP_FINDINGS_LIMIT = 3;
 
 function cleanText(value) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
@@ -224,35 +230,40 @@ function formatReviewContext(rendering) {
   const parts = [];
 
   if (rendering.mode) {
-    parts.push(`mode ${renderCode(rendering.mode)}`);
-    parts.push(REVIEW_MODE_DETAILS[rendering.mode]);
+    parts.push(renderCode(rendering.mode));
   }
 
-  const scopeSummary = formatScopeSummary(rendering);
-  if (scopeSummary) {
-    parts.push(`scope ${scopeSummary}`);
+  if (
+    typeof rendering.selectedFiles === 'number' &&
+    typeof rendering.reviewableFiles === 'number'
+  ) {
+    parts.push(`${rendering.selectedFiles}/${rendering.reviewableFiles} files`);
   }
 
-  const packetCoverage = formatPacketCoverage(rendering);
-  if (packetCoverage) {
-    parts.push(`packet ${packetCoverage}`);
+  if (
+    typeof rendering.selectedChanges === 'number' &&
+    typeof rendering.reviewableChanges === 'number'
+  ) {
+    parts.push(`${rendering.selectedChanges}/${rendering.reviewableChanges} lines`);
   }
 
-  const turnBudget = formatTurnBudget(rendering);
-  if (turnBudget) {
-    parts.push(`turn budget ${turnBudget}`);
+  if (
+    typeof rendering.packetIncludedFiles === 'number' &&
+    typeof rendering.packetTotalFiles === 'number'
+  ) {
+    parts.push(`packet ${rendering.packetIncludedFiles}/${rendering.packetTotalFiles}`);
   }
 
-  const timeBudget = formatTimeBudget(rendering);
-  if (timeBudget) {
-    parts.push(`workflow cap ${timeBudget}`);
+  const runtimeBudget = formatCombinedBudget(rendering) || formatTimeBudget(rendering) || formatTurnBudget(rendering);
+  if (runtimeBudget) {
+    parts.push(runtimeBudget);
   }
 
   if (parts.length === 0) {
     return null;
   }
 
-  return `> 🧭 Review context: ${parts.join('; ')}.`;
+  return `> 🧭 ${parts.join(' • ')}`;
 }
 
 function classifyFallbackReason(reason) {
@@ -612,8 +623,8 @@ export function normalizeStructuredOutput(raw) {
   return { ok: true, value };
 }
 
-function renderChecklistTable(title, labelHeader, labelKey, rows) {
-  const lines = ['', title, '', `| ${labelHeader} | Status | Notes |`, '|---|---|---|'];
+function renderChecklistTable(labelHeader, labelKey, rows) {
+  const lines = [`| ${labelHeader} | Status | Notes |`, '|---|---|---|'];
   for (const row of rows) {
     lines.push(
       `| ${renderInlineText(row[labelKey])} | ${STATUS_LABELS[row.status]} | ${renderInlineText(row.notes)} |`
@@ -622,9 +633,9 @@ function renderChecklistTable(title, labelHeader, labelKey, rows) {
   return lines;
 }
 
-function renderBulletSection(title, items) {
+function renderBulletSection(items) {
   if (items.length === 0) return [];
-  return ['', title, ...items.map((item) => `- ${renderInlineText(item)}`)];
+  return items.map((item) => `- ${renderInlineText(item)}`);
 }
 
 function renderFindingSnippets(snippets) {
@@ -646,46 +657,104 @@ function renderFindingSnippets(snippets) {
   return lines;
 }
 
+function renderDetailsBlock(summary, bodyLines) {
+  if (!bodyLines.length) {
+    return [];
+  }
+
+  return ['', '<details>', `<summary>${escapeMarkdown(summary)}</summary>`, '', ...bodyLines, '', '</details>'];
+}
+
+function renderFindingReference(finding) {
+  return finding.line ? `${finding.file}:${finding.line}` : finding.file;
+}
+
+function getOrderedFindings(findings) {
+  return SEVERITY_ORDER.flatMap((severity) => findings.filter((finding) => finding.severity === severity));
+}
+
+function renderTopFindings(findings) {
+  if (findings.length === 0) {
+    return ['No confirmed issues found after reviewing the diff and surrounding code.'];
+  }
+
+  const orderedFindings = getOrderedFindings(findings);
+  const lines = orderedFindings
+    .slice(0, TOP_FINDINGS_LIMIT)
+    .map(
+      (finding) =>
+        `- ${SEVERITY_SUMMARY_LABELS[finding.severity]} ${renderCode(renderFindingReference(finding))} — ${renderInlineText(finding.title)}`
+    );
+
+  if (orderedFindings.length > TOP_FINDINGS_LIMIT) {
+    const remaining = orderedFindings.length - TOP_FINDINGS_LIMIT;
+    lines.push(`- ${remaining} more finding${remaining === 1 ? '' : 's'} in the details below.`);
+  }
+
+  return lines;
+}
+
+function renderDetailedFindings(findings) {
+  if (findings.length === 0) {
+    return [];
+  }
+
+  const lines = [];
+  for (const severity of SEVERITY_ORDER) {
+    const scopedFindings = findings.filter((finding) => finding.severity === severity);
+    if (scopedFindings.length === 0) continue;
+
+    lines.push(`**${SEVERITY_SUMMARY_LABELS[severity]} (${scopedFindings.length})**`, '');
+    for (const finding of scopedFindings) {
+      lines.push(`- **${renderCode(renderFindingReference(finding))} — ${renderInlineText(finding.title)}**`);
+      lines.push(`  Problem: ${renderInlineText(finding.what)}`);
+      lines.push(`  Why it matters: ${renderInlineText(finding.why)}`);
+      lines.push(`  Suggested fix: ${renderInlineText(finding.fix)}`);
+      lines.push(...renderFindingSnippets(finding.snippets));
+      lines.push('');
+    }
+  }
+
+  if (lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+
+  return lines;
+}
+
 export function renderStructuredReview(review, { model, rendering: renderOptions } = {}) {
   const rendering = mergeRenderingMetadata(review?.rendering, renderOptions);
-  const lines = ['### 📋 Summary', '', renderInlineText(review.summary), '', '### 🔍 Findings'];
+  const lines = [
+    '### Verdict',
+    '',
+    `**${ASSESSMENTS[review.overallAssessment]}** — ${renderInlineText(review.overallRationale)}`,
+    '',
+    renderInlineText(review.summary),
+  ];
   const reviewContext = formatReviewContext(rendering);
 
   if (reviewContext) {
-    lines.splice(4, 0, reviewContext, '');
+    lines.push('', reviewContext);
   }
 
-  if (review.findings.length === 0) {
-    lines.push('No confirmed issues found after reviewing the diff and surrounding code.');
-  } else {
-    for (const severity of SEVERITY_ORDER) {
-      const findings = review.findings.filter((finding) => finding.severity === severity);
-      if (findings.length === 0) continue;
-
-      lines.push('', SEVERITY_HEADERS[severity], '');
-      for (const finding of findings) {
-        const location = finding.line ? `${finding.file}:${finding.line}` : finding.file;
-        lines.push(`- **${renderCode(location)} — ${renderInlineText(finding.title)}**`);
-        lines.push(`  Problem: ${renderInlineText(finding.what)}`);
-        lines.push(`  Why it matters: ${renderInlineText(finding.why)}`);
-        lines.push(`  Suggested fix: ${renderInlineText(finding.fix)}`);
-        lines.push(...renderFindingSnippets(finding.snippets));
-        lines.push('');
-      }
-    }
-    if (lines[lines.length - 1] === '') lines.pop();
-  }
-
-  lines.push(...renderChecklistTable('### 🔒 Security Checklist', 'Check', 'check', review.securityChecklist));
-  lines.push(...renderChecklistTable('### 📊 CCS Compliance', 'Rule', 'rule', review.ccsCompliance));
-  lines.push(...renderBulletSection('### 💡 Informational', review.informational));
-  lines.push(...renderBulletSection("### ✅ What's Done Well", review.strengths));
+  lines.push('', '### Top Findings', '', ...renderTopFindings(review.findings));
+  lines.push(...renderDetailsBlock(`Full Findings (${review.findings.length})`, renderDetailedFindings(review.findings)));
+  lines.push(
+    ...renderDetailsBlock(
+      `Security Checklist (${review.securityChecklist.length})`,
+      renderChecklistTable('Check', 'check', review.securityChecklist)
+    )
+  );
+  lines.push(
+    ...renderDetailsBlock(
+      `CCS Compliance (${review.ccsCompliance.length})`,
+      renderChecklistTable('Rule', 'rule', review.ccsCompliance)
+    )
+  );
+  lines.push(...renderDetailsBlock(`Informational (${review.informational.length})`, renderBulletSection(review.informational)));
+  lines.push(...renderDetailsBlock(`What's Done Well (${review.strengths.length})`, renderBulletSection(review.strengths)));
 
   lines.push(
-    '',
-    '### 🎯 Overall Assessment',
-    '',
-    `**${ASSESSMENTS[review.overallAssessment]}** — ${renderInlineText(review.overallRationale)}`,
     '',
     `> 🤖 Reviewed by \`${model}\``
   );
