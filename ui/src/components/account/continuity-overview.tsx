@@ -12,10 +12,13 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { CopyButton } from '@/components/ui/copy-button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { PlainCcsLane } from '@/lib/api-client';
 
 interface ContinuityOverviewProps {
   totalAccounts: number;
+  primaryAccountName?: string | null;
   isolatedCount: number;
   sharedStandardCount: number;
   deeperSharedCount: number;
@@ -27,6 +30,7 @@ interface ContinuityOverviewProps {
   deeperReadyGroups: string[];
   legacyTargetCount: number;
   cliproxyCount: number;
+  plainCcsLane: PlainCcsLane | null;
 }
 
 type ReadinessState =
@@ -45,6 +49,7 @@ const InfoTooltip = ({ titleKey, descKey }: { titleKey: string; descKey: string 
         <Button
           variant="ghost"
           size="icon"
+          aria-label={t(titleKey)}
           className="h-5 w-5 rounded-full hover:bg-muted text-muted-foreground/70 transition-colors"
         >
           <Info className="h-3 w-3" />
@@ -64,6 +69,7 @@ const InfoTooltip = ({ titleKey, descKey }: { titleKey: string; descKey: string 
 
 export function ContinuityOverview({
   totalAccounts,
+  primaryAccountName,
   isolatedCount,
   sharedStandardCount,
   deeperSharedCount,
@@ -74,8 +80,26 @@ export function ContinuityOverview({
   deeperReadyGroups,
   legacyTargetCount,
   cliproxyCount,
+  plainCcsLane,
 }: ContinuityOverviewProps) {
   const { t } = useTranslation();
+  const laneLabel = plainCcsLane
+    ? plainCcsLane.kind === 'native'
+      ? t('continuityOverview.lane.native')
+      : plainCcsLane.kind === 'account-default'
+        ? t('continuityOverview.lane.accountDefault', {
+            name: plainCcsLane.account_name || '',
+          })
+        : plainCcsLane.kind === 'account-inherited'
+          ? t('continuityOverview.lane.accountInherited', {
+              name: plainCcsLane.account_name || '',
+            })
+          : plainCcsLane.kind === 'profile-default'
+            ? t('continuityOverview.lane.profileDefault', {
+                name: plainCcsLane.profile_name || 'default',
+              })
+            : plainCcsLane.label
+    : '';
 
   const readiness: ReadinessState =
     totalAccounts < 2
@@ -110,6 +134,11 @@ export function ContinuityOverview({
   };
 
   const currentIcon = iconMap[readiness];
+  const plainLaneUsesPrimaryAccount =
+    !!primaryAccountName && plainCcsLane?.account_name === primaryAccountName;
+  const showPlainLaneRecovery =
+    totalAccounts > 0 && !!plainCcsLane && (!primaryAccountName || !plainLaneUsesPrimaryAccount);
+  const showSharedRecoverySteps = totalAccounts > 1 && readiness !== 'ready';
 
   return (
     <div className="flex flex-col gap-4">
@@ -167,7 +196,7 @@ export function ContinuityOverview({
                 variant="secondary"
                 className="font-mono text-[11px] px-2 bg-muted/50 text-muted-foreground border-transparent"
               >
-                Recommend: {highlightGroup}
+                {t('continuityOverview.recommendBadge', { group: highlightGroup })}
               </Badge>
             )}
             {hasMixedState && (
@@ -175,12 +204,69 @@ export function ContinuityOverview({
                 variant="secondary"
                 className="font-mono text-[11px] px-2 bg-muted/50 text-muted-foreground border-transparent"
               >
-                Partial sync ({highlightGroup})
+                {t('continuityOverview.partialBadge', { group: highlightGroup })}
               </Badge>
             )}
           </div>
         </CardContent>
       </Card>
+
+      {(showPlainLaneRecovery || showSharedRecoverySteps) && (
+        <Card className="border-dashed">
+          <CardContent className="p-5 space-y-4">
+            {showPlainLaneRecovery && (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {t('continuityOverview.plainLaneTitle')}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('continuityOverview.plainLaneDescription', {
+                      lane: laneLabel || 'plain ccs',
+                    })}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="rounded-md border bg-background px-2 py-2 font-mono text-[11px] flex items-start gap-2">
+                    <span className="flex-1 break-all">ccs -r</span>
+                    <CopyButton value="ccs -r" size="icon" />
+                  </div>
+                  <div className="rounded-md border bg-background px-2 py-2 font-mono text-[11px] flex items-start gap-2">
+                    <span className="flex-1 break-all">ccs auth backup default</span>
+                    <CopyButton value="ccs auth backup default" size="icon" />
+                  </div>
+                  {primaryAccountName ? (
+                    <div className="rounded-md border bg-background px-2 py-2 font-mono text-[11px] flex items-start gap-2">
+                      <span className="flex-1 break-all">
+                        {`ccs auth default ${primaryAccountName}`}
+                      </span>
+                      <CopyButton value={`ccs auth default ${primaryAccountName}`} size="icon" />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {t('continuityOverview.setDefaultHint')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showSharedRecoverySteps && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">
+                  {t('continuityReadiness.stepsTitle')}
+                </p>
+                <ol className="space-y-1 pl-5 text-sm text-muted-foreground">
+                  <li>{t('continuityReadiness.steps.syncBoth')}</li>
+                  <li>{t('continuityReadiness.steps.sameGroup', { group: highlightGroup })}</li>
+                  <li>{t('continuityReadiness.steps.enableDeeper')}</li>
+                  <li>{t('continuityReadiness.steps.resumeOriginal')}</li>
+                </ol>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Horizontal Progression Chain */}
       <div className="flex flex-col md:flex-row items-center gap-3">

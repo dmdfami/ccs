@@ -39,6 +39,7 @@ export function AccountsPage() {
   const deeperReadyGroups = data?.deeperReadyGroups || [];
   const sharedGroups = data?.sharedGroups || [];
   const groupSummaries = data?.groupSummaries || [];
+  const plainCcsLane = data?.plainCcsLane || null;
 
   const legacyTargets = authAccounts.filter(
     (account) => account.context_inferred || account.continuity_inferred
@@ -189,6 +190,7 @@ export function AccountsPage() {
           <div className="flex-1 min-h-0 p-5 space-y-4 overflow-y-auto">
             <ContinuityOverview
               totalAccounts={authAccounts.length}
+              primaryAccountName={authAccounts.length === 1 ? authAccounts[0]?.name : null}
               isolatedCount={isolatedCount}
               sharedStandardCount={sharedStandardCount}
               deeperSharedCount={deeperSharedCount}
@@ -200,6 +202,7 @@ export function AccountsPage() {
               deeperReadyGroups={deeperReadyGroups}
               legacyTargetCount={legacyTargetCount}
               cliproxyCount={cliproxyCount}
+              plainCcsLane={plainCcsLane}
             />
 
             <Card className="flex flex-col">
@@ -217,6 +220,7 @@ export function AccountsPage() {
                     data={authAccounts}
                     defaultAccount={data?.default ?? null}
                     groupSummaries={groupSummaries}
+                    plainCcsLane={plainCcsLane}
                   />
                 )}
               </CardContent>
@@ -264,6 +268,7 @@ export function AccountsPage() {
 
         <ContinuityOverview
           totalAccounts={authAccounts.length}
+          primaryAccountName={authAccounts.length === 1 ? authAccounts[0]?.name : null}
           isolatedCount={isolatedCount}
           sharedStandardCount={sharedStandardCount}
           deeperSharedCount={deeperSharedCount}
@@ -275,6 +280,7 @@ export function AccountsPage() {
           deeperReadyGroups={deeperReadyGroups}
           legacyTargetCount={legacyTargetCount}
           cliproxyCount={cliproxyCount}
+          plainCcsLane={plainCcsLane}
         />
 
         <Card>
@@ -289,6 +295,7 @@ export function AccountsPage() {
                 data={authAccounts}
                 defaultAccount={data?.default ?? null}
                 groupSummaries={groupSummaries}
+                plainCcsLane={plainCcsLane}
               />
             )}
           </CardContent>

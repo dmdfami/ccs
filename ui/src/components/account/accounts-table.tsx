@@ -35,14 +35,21 @@ import {
   useUpdateAccountContext,
 } from '@/hooks/use-accounts';
 import type { AuthAccountRow, SharedGroupSummary } from '@/lib/account-continuity';
+import type { PlainCcsLane } from '@/lib/api-client';
 
 interface AccountsTableProps {
   data: AuthAccountRow[];
   defaultAccount: string | null;
   groupSummaries: SharedGroupSummary[];
+  plainCcsLane: PlainCcsLane | null;
 }
 
-export function AccountsTable({ data, defaultAccount, groupSummaries }: AccountsTableProps) {
+export function AccountsTable({
+  data,
+  defaultAccount,
+  groupSummaries,
+  plainCcsLane,
+}: AccountsTableProps) {
   const { t } = useTranslation();
   const setDefaultMutation = useSetDefaultAccount();
   const deleteMutation = useDeleteAccount();
@@ -114,7 +121,7 @@ export function AccountsTable({ data, defaultAccount, groupSummaries }: Accounts
                   variant="outline"
                   className={`font-mono text-[10px] uppercase px-1.5 py-0 border ${isDeeper ? 'text-indigo-700 border-indigo-300/60 bg-indigo-50/50 dark:text-indigo-300 dark:border-indigo-900/40 dark:bg-indigo-900/20' : 'text-emerald-700 border-emerald-300/60 bg-emerald-50/50 dark:text-emerald-300 dark:border-emerald-900/40 dark:bg-emerald-900/20'}`}
                 >
-                  {isDeeper ? 'Deeper' : 'Shared'}
+                  {isDeeper ? t('accountsTable.badges.deeper') : t('accountsTable.badges.shared')}
                 </Badge>
                 <span className="text-xs font-semibold text-foreground/80">{group}</span>
               </div>
@@ -136,7 +143,7 @@ export function AccountsTable({ data, defaultAccount, groupSummaries }: Accounts
                 variant="outline"
                 className="text-amber-700 border-amber-300/60 bg-amber-50/50 dark:text-amber-400 dark:border-amber-900/40 dark:bg-amber-900/20 font-mono text-[10px] uppercase px-1.5 py-0"
               >
-                Legacy
+                {t('accountsTable.badges.legacy')}
               </Badge>
               <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80 whitespace-nowrap">
                 {t('accountsTable.legacyReview')}
@@ -151,7 +158,7 @@ export function AccountsTable({ data, defaultAccount, groupSummaries }: Accounts
               variant="secondary"
               className="font-mono text-[10px] uppercase px-1.5 py-0 text-muted-foreground bg-muted/60 border-transparent shadow-none"
             >
-              Isolated
+              {t('accountsTable.badges.isolated')}
             </Badge>
           </div>
         );
@@ -321,6 +328,7 @@ export function AccountsTable({ data, defaultAccount, groupSummaries }: Accounts
         <EditAccountContextDialog
           account={contextTarget}
           groupSummaries={groupSummaries}
+          plainCcsLane={plainCcsLane}
           onClose={() => setContextTarget(null)}
         />
       )}

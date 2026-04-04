@@ -540,6 +540,21 @@ const resources = {
             'If the original conversation is important, keep resuming it from the original account until the second account is ready.',
         },
       },
+      continuityOverview: {
+        plainLaneTitle: 'Plain ccs is using a different resume lane',
+        plainLaneDescription:
+          'Plain ccs currently resumes from {{lane}}, not this account lane. Recover the original lane first before changing sync settings.',
+        setDefaultHint:
+          'Use the Set Default action on the account you want plain ccs to follow in future sessions.',
+        recommendBadge: 'Recommend {{group}}',
+        partialBadge: 'Partial sync {{group}}',
+        lane: {
+          native: 'native Claude (~/.claude)',
+          accountDefault: 'account {{name}}',
+          accountInherited: 'account {{name}} via continuity inheritance',
+          profileDefault: 'default profile {{name}} via native Claude lane',
+        },
+      },
       accountsTable: {
         name: 'Name',
         type: 'Type',
@@ -573,6 +588,12 @@ const resources = {
         sameGroupPeerCount_other: '{{count}} same-group peers',
         legacyReview: 'Review and confirm this inferred default.',
         noHandoff: 'Cross-account resume stays in the original account.',
+        badges: {
+          shared: 'Shared',
+          deeper: 'Deeper',
+          legacy: 'Legacy',
+          isolated: 'Isolated',
+        },
       },
       addAccountDialog: {
         title: 'Add {{displayName}} Account',
@@ -1820,6 +1841,20 @@ const resources = {
           resumeOriginal: '在第二个账号配置完成之前，重要会话仍应从原账号继续恢复。',
         },
       },
+      continuityOverview: {
+        plainLaneTitle: '普通 ccs 正在使用不同的续接通道',
+        plainLaneDescription:
+          '普通 ccs 当前会从 {{lane}} 续接，而不是这个账号通道。请先恢复原通道中的会话，再修改同步设置。',
+        setDefaultHint: '如果希望以后普通 ccs 跟随某个账号，请使用该账号行上的“设为默认”。',
+        recommendBadge: '建议 {{group}}',
+        partialBadge: '部分同步 {{group}}',
+        lane: {
+          native: '原生 Claude（~/.claude）',
+          accountDefault: '账号 {{name}}',
+          accountInherited: '通过连续性继承使用账号 {{name}}',
+          profileDefault: '默认配置 {{name}}（仍走原生 Claude 通道）',
+        },
+      },
       accountsTable: {
         name: '名称',
         type: '类型',
@@ -1853,6 +1888,12 @@ const resources = {
         sameGroupPeerCount_other: '{{count}} 个同组账号',
         legacyReview: '请检查并确认这个推断出的默认状态。',
         noHandoff: '跨账号续接仍会回到原账号。',
+        badges: {
+          shared: '共享',
+          deeper: '更深',
+          legacy: '旧策略',
+          isolated: '隔离',
+        },
       },
       addAccountDialog: {
         title: '添加 {{displayName}} 账号',
@@ -3118,6 +3159,21 @@ const resources = {
             'Cho đến khi tài khoản thứ hai sẵn sàng, các cuộc trò chuyện quan trọng vẫn nên được resume từ tài khoản gốc.',
         },
       },
+      continuityOverview: {
+        plainLaneTitle: 'Plain ccs đang dùng một lane resume khác',
+        plainLaneDescription:
+          'Plain ccs hiện resume từ {{lane}}, không phải lane của tài khoản này. Hãy khôi phục lane gốc trước khi đổi cài đặt sync.',
+        setDefaultHint:
+          'Nếu muốn plain ccs theo một tài khoản trong các phiên sau, hãy dùng hành động Set Default trên dòng tài khoản đó.',
+        recommendBadge: 'Đề xuất {{group}}',
+        partialBadge: 'Đồng bộ một phần {{group}}',
+        lane: {
+          native: 'Claude gốc (~/.claude)',
+          accountDefault: 'tài khoản {{name}}',
+          accountInherited: 'tài khoản {{name}} qua continuity inheritance',
+          profileDefault: 'profile mặc định {{name}} qua lane Claude gốc',
+        },
+      },
       accountsTable: {
         name: 'Tên',
         type: 'Kiểu',
@@ -3152,6 +3208,12 @@ const resources = {
         sameGroupPeerCount_other: '{{count}} tài khoản cùng nhóm',
         legacyReview: 'Hãy xem lại và xác nhận trạng thái suy ra này.',
         noHandoff: 'Resume xuyên tài khoản vẫn sẽ quay về tài khoản gốc.',
+        badges: {
+          shared: 'Chia sẻ',
+          deeper: 'Sâu hơn',
+          legacy: 'Kế thừa',
+          isolated: 'Tách biệt',
+        },
       },
       addAccountDialog: {
         title: 'Thêm tài khoản {{displayName}}',
@@ -4454,6 +4516,21 @@ const resources = {
             '2 つ目のアカウントが整うまでは、重要な会話は元のアカウントから再開し続けてください。',
         },
       },
+      continuityOverview: {
+        plainLaneTitle: '通常の ccs は別の再開レーンを使っています',
+        plainLaneDescription:
+          '通常の ccs は現在 {{lane}} から再開しており、このアカウントのレーンではありません。同期設定を変える前に元のレーンを先に復旧してください。',
+        setDefaultHint:
+          '今後の通常の ccs を特定のアカウントに合わせたい場合は、その行の「既定に設定」を使ってください。',
+        recommendBadge: '推奨 {{group}}',
+        partialBadge: '部分同期 {{group}}',
+        lane: {
+          native: 'ネイティブ Claude（~/.claude）',
+          accountDefault: 'アカウント {{name}}',
+          accountInherited: '継続性継承によるアカウント {{name}}',
+          profileDefault: '既定プロファイル {{name}}（ネイティブ Claude レーン）',
+        },
+      },
       accountsTable: {
         name: '名前',
         type: '種別',
@@ -4488,6 +4565,12 @@ const resources = {
         sameGroupPeerCount_other: '{{count}} 件の同グループアカウント',
         legacyReview: 'この推定された既定状態を確認して明示的に確定してください。',
         noHandoff: 'アカウント間再開は元のアカウントに残ります。',
+        badges: {
+          shared: '共有',
+          deeper: '拡張',
+          legacy: 'レガシー',
+          isolated: '分離',
+        },
       },
       addAccountDialog: {
         title: '{{displayName}} アカウントを追加',

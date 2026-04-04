@@ -5,7 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import type { Account } from '@/lib/api-client';
+import type { Account, PlainCcsLane } from '@/lib/api-client';
 import {
   summarizeAuthAccountContinuity,
   type AuthAccountRow,
@@ -30,6 +30,7 @@ export interface AuthAccountsView {
   deeperReadyGroups: string[];
   sharedGroups: string[];
   groupSummaries: SharedGroupSummary[];
+  plainCcsLane: PlainCcsLane | null;
 }
 
 export function useAccounts() {
@@ -61,6 +62,7 @@ export function useAccounts() {
         deeperReadyGroups: continuity.deeperReadyGroups,
         sharedGroups: continuity.sharedGroups,
         groupSummaries: continuity.groupSummaries,
+        plainCcsLane: data.plain_ccs_lane ?? null,
       };
     },
   });
