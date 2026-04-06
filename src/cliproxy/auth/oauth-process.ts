@@ -22,7 +22,7 @@ import {
   type GCloudProject,
   type ProjectSelectionPrompt,
 } from '../project-selection-handler';
-import { ProviderOAuthConfig } from './auth-types';
+import { KiroAuthMethod, ProviderOAuthConfig } from './auth-types';
 import { getTimeoutTroubleshooting, showStep } from './environment-detector';
 import { isAuthenticated, registerAccountFromToken } from './token-manager';
 import {
@@ -51,6 +51,9 @@ export interface OAuthProcessOptions {
   isCLI: boolean;
   nickname?: string;
   expectedAccountId?: string;
+  authFlowType?: 'device_code' | 'authorization_code';
+  kiroMethod?: KiroAuthMethod;
+  manualCallback?: boolean;
 }
 
 /** Internal state for OAuth process */
@@ -66,6 +69,9 @@ interface ProcessState {
   deviceCodeDisplayed: boolean;
   /** The user code to enter at verification URL */
   userCode: string | null;
+  kiroMethodSelectionHandled: boolean;
+  manualCallbackPrompted: boolean;
+  cancelManualCallbackPrompt: (() => void) | null;
 }
 
 /**
@@ -106,6 +112,231 @@ async function handleProjectSelection(
   }
 }
 
+function resolveAuthFlowType(options: OAuthProcessOptions): 'device_code' | 'authorization_code' {
+  return options.authFlowType || OAUTH_FLOW_TYPES[options.provider] || 'authorization_code';
+}
+
+export function isLoopbackHost(hostname: string): boolean {
+  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  return (
+    normalized === '127.0.0.1' ||
+    normalized === 'localhost' ||
+    normalized === '::1' ||
+    normalized === '0:0:0:0:0:0:0:1'
+  );
+}
+
+export function getExpectedLocalCallback(authUrl: string): {
+  origin: string;
+  pathname: string;
+  state: string | null;
+} | null {
+  try {
+    const parsedAuthUrl = new URL(authUrl);
+    const redirectUriRaw = parsedAuthUrl.searchParams.get('redirect_uri');
+    if (!redirectUriRaw) {
+      return null;
+    }
+
+    const redirectUri = new URL(redirectUriRaw);
+    if (!isLoopbackHost(redirectUri.hostname)) {
+      return null;
+    }
+
+    return {
+      origin: redirectUri.origin,
+      pathname: redirectUri.pathname,
+      state: parsedAuthUrl.searchParams.get('state'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function validateManualCallbackUrl(callbackUrl: string, authUrl: string): string | null {
+  let parsedCallback: URL;
+  try {
+    parsedCallback = new URL(callbackUrl);
+  } catch {
+    return 'Invalid callback URL format';
+  }
+
+  if (!parsedCallback.searchParams.get('code')) {
+    return 'Invalid callback URL: missing code parameter';
+  }
+
+  const expectedCallback = getExpectedLocalCallback(authUrl);
+  if (!expectedCallback) {
+    return 'Unable to determine the expected local callback target';
+  }
+
+  if (!isLoopbackHost(parsedCallback.hostname)) {
+    return 'Callback URL must target the local OAuth callback server';
+  }
+
+  if (
+    parsedCallback.origin !== expectedCallback.origin ||
+    parsedCallback.pathname !== expectedCallback.pathname
+  ) {
+    return 'Callback URL does not match the expected local OAuth callback target';
+  }
+
+  if (expectedCallback.state) {
+    const callbackState = parsedCallback.searchParams.get('state');
+    if (callbackState !== expectedCallback.state) {
+      return 'Callback URL state does not match the active OAuth session';
+    }
+  }
+
+  return null;
+}
+
+export function getKiroBuilderIdSelectionInput(output: string): string | null {
+  const promptMatch = /Select login method/i.exec(output);
+  if (!promptMatch || promptMatch.index === undefined) {
+    return null;
+  }
+
+  const promptWindow = output.slice(promptMatch.index, promptMatch.index + 600);
+  const optionMatch = /(?:^|\n)\s*(\d+)\s*[\).:-]?\s*.*\bBuilder ID\b/im.exec(promptWindow);
+  if (!optionMatch) {
+    return null;
+  }
+
+  return `${optionMatch[1]}\n`;
+}
+
+export function extractLikelyOAuthAuthorizationUrl(output: string): string | null {
+  const urls = Array.from(output.matchAll(/https?:\/\/[^\s]+/g), (match) => match[0]);
+  let selectedUrl: string | null = null;
+  let selectedScore = 0;
+
+  for (const url of urls) {
+    try {
+      const parsed = new URL(url);
+      let score = 0;
+      if (parsed.searchParams.has('redirect_uri')) score += 4;
+      if (parsed.searchParams.has('state')) score += 2;
+      if (parsed.searchParams.has('code_challenge')) score += 1;
+      if (parsed.pathname.includes('/authorize')) score += 1;
+      if (isLoopbackHost(parsed.hostname)) score -= 3;
+
+      if (score >= selectedScore && score > 0) {
+        selectedUrl = url;
+        selectedScore = score;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return selectedUrl;
+}
+
+async function promptManualCallbackUrl(
+  displayName: string,
+  state: ProcessState,
+  timeoutMs: number
+): Promise<string | null> {
+  const readline = await import('readline');
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise<string | null>((resolve) => {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    const finish = (value: string | null) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      state.cancelManualCallbackPrompt = null;
+      resolve(value);
+    };
+
+    state.cancelManualCallbackPrompt = () => {
+      if (!settled) {
+        rl.close();
+        finish(null);
+      }
+    };
+
+    rl.on('close', () => {
+      finish(null);
+    });
+
+    console.log('');
+    console.log(info(`${displayName} is waiting for the OAuth callback.`));
+    console.log('Paste the full callback URL after you finish the login in your browser.');
+    rl.question('> ', (answer) => {
+      rl.close();
+      finish(answer.trim() || null);
+    });
+
+    timeout = setTimeout(() => {
+      if (!settled) {
+        console.log('');
+        console.log(fail('Timed out waiting for callback URL'));
+        rl.close();
+      }
+    }, timeoutMs);
+  });
+}
+
+async function replayManualCallback(
+  oauthConfig: ProviderOAuthConfig,
+  authProcess: ChildProcess,
+  authUrl: string,
+  verbose: boolean,
+  state: ProcessState,
+  timeoutMs: number
+): Promise<boolean> {
+  if (!authUrl.includes('http://') && !authUrl.includes('https://')) {
+    return false;
+  }
+
+  const callbackUrl = await promptManualCallbackUrl(oauthConfig.displayName, state, timeoutMs);
+  if (!callbackUrl) {
+    console.log(info('Cancelled'));
+    killWithEscalation(authProcess);
+    return true;
+  }
+
+  const validationError = validateManualCallbackUrl(callbackUrl, authUrl);
+  if (validationError) {
+    console.log(fail(validationError));
+    killWithEscalation(authProcess);
+    return true;
+  }
+
+  console.log(info('Replaying callback to the local auth server...'));
+
+  try {
+    const response = await fetch(callbackUrl);
+    if (!response.ok && response.status >= 400) {
+      console.log(fail(`OAuth callback failed with status ${response.status}`));
+      killWithEscalation(authProcess);
+      return true;
+    }
+    console.log(ok('Callback submitted. Waiting for token exchange...'));
+  } catch (error) {
+    if (verbose) {
+      console.log(fail(`Failed to replay callback: ${(error as Error).message}`));
+    } else {
+      console.log(fail('Failed to replay callback to the local auth server'));
+    }
+    killWithEscalation(authProcess);
+  }
+
+  return true;
+}
+
 /**
  * Handle stdout data from OAuth process
  */
@@ -119,9 +350,22 @@ async function handleStdout(
   log(`stdout: ${output.trim()}`);
   state.accumulatedOutput += output;
 
-  // H4: Use explicit flow type from OAUTH_FLOW_TYPES instead of null port check
-  const flowType = OAUTH_FLOW_TYPES[options.provider] || 'authorization_code';
+  const flowType = resolveAuthFlowType(options);
   const isDeviceCodeFlow = flowType === 'device_code';
+
+  if (
+    options.provider === 'kiro' &&
+    options.kiroMethod === 'aws' &&
+    !state.kiroMethodSelectionHandled &&
+    state.accumulatedOutput.includes('Select login method')
+  ) {
+    const builderIdSelection = getKiroBuilderIdSelectionInput(state.accumulatedOutput);
+    if (builderIdSelection) {
+      state.kiroMethodSelectionHandled = true;
+      authProcess.stdin?.write(builderIdSelection);
+      log(`Auto-selected Kiro Builder ID flow (${builderIdSelection.trim()})`);
+    }
+  }
 
   // Parse project list when available
   if (isProjectList(state.accumulatedOutput) && state.parsedProjects.length === 0) {
@@ -191,13 +435,25 @@ async function handleStdout(
 
   // Display OAuth URL for all modes (enables VS Code terminal URL detection popup)
   if (!isDeviceCodeFlow && !state.urlDisplayed) {
-    const urlMatch = output.match(/https?:\/\/[^\s]+/);
-    if (urlMatch) {
+    const authUrl = extractLikelyOAuthAuthorizationUrl(state.accumulatedOutput);
+    if (authUrl) {
       console.log('');
       console.log(info(`${options.oauthConfig.displayName} OAuth URL:`));
-      console.log(`    ${urlMatch[0]}`);
+      console.log(`    ${authUrl}`);
       console.log('');
       state.urlDisplayed = true;
+
+      if (options.manualCallback && !state.manualCallbackPrompted) {
+        state.manualCallbackPrompted = true;
+        await replayManualCallback(
+          options.oauthConfig,
+          authProcess,
+          authUrl,
+          options.verbose,
+          state,
+          10 * 60 * 1000
+        );
+      }
     }
   }
 }
@@ -208,11 +464,11 @@ function displayUrlFromStderr(
   state: ProcessState,
   oauthConfig: ProviderOAuthConfig
 ): void {
-  const urlMatch = output.match(/https?:\/\/[^\s]+/);
-  if (urlMatch) {
+  const authUrl = extractLikelyOAuthAuthorizationUrl(output);
+  if (authUrl) {
     console.log('');
     console.log(info(`${oauthConfig.displayName} OAuth URL:`));
-    console.log(`    ${urlMatch[0]}`);
+    console.log(`    ${authUrl}`);
     console.log('');
     state.urlDisplayed = true;
   }
@@ -386,14 +642,17 @@ export function executeOAuthProcess(options: OAuthProcessOptions): Promise<Accou
   };
 
   return new Promise<AccountInfo | null>((resolve) => {
-    // H4: Use explicit flow type from OAUTH_FLOW_TYPES instead of null port check
-    const flowType = OAUTH_FLOW_TYPES[provider] || 'authorization_code';
+    const flowType = resolveAuthFlowType(options);
     const isDeviceCodeFlow = flowType === 'device_code';
 
-    // H6: TTY detection - only inherit stdin if TTY available (prevents issues in CI/piped scripts)
-    // Device Code flows may need interactive stdin for email/prompts
-    // Authorization Code flows need piped stdin for project selection
-    const stdinMode = isDeviceCodeFlow && process.stdin.isTTY ? 'inherit' : 'pipe';
+    // Device-code flows can usually inherit stdin, but Kiro's default AWS flow now
+    // prints an intermediate Builder ID vs IDC selector that CCS auto-answers.
+    const stdinMode =
+      isDeviceCodeFlow &&
+      process.stdin.isTTY &&
+      !(provider === 'kiro' && options.kiroMethod === 'aws')
+        ? 'inherit'
+        : 'pipe';
 
     const authProcess = spawn(binaryPath, args, {
       stdio: [stdinMode, 'pipe', 'pipe'],
@@ -424,6 +683,9 @@ export function executeOAuthProcess(options: OAuthProcessOptions): Promise<Accou
       sessionId: generateSessionId(),
       deviceCodeDisplayed: false,
       userCode: null,
+      kiroMethodSelectionHandled: false,
+      manualCallbackPrompted: false,
+      cancelManualCallbackPrompt: null,
     };
 
     // Register session for cancellation support
@@ -459,12 +721,26 @@ export function executeOAuthProcess(options: OAuthProcessOptions): Promise<Accou
       await handleStdout(data.toString(), state, options, authProcess, log);
     });
 
-    authProcess.stderr?.on('data', (data: Buffer) => {
+    authProcess.stderr?.on('data', async (data: Buffer) => {
       const output = data.toString();
       state.stderrData += output;
       log(`stderr: ${output.trim()}`);
       if (headless && !state.urlDisplayed) {
         displayUrlFromStderr(output, state, oauthConfig);
+      }
+      if (options.manualCallback && !state.manualCallbackPrompted) {
+        const urlMatch = output.match(/https?:\/\/[^\s]+/);
+        if (urlMatch) {
+          state.manualCallbackPrompted = true;
+          await replayManualCallback(
+            options.oauthConfig,
+            authProcess,
+            urlMatch[0],
+            options.verbose,
+            state,
+            10 * 60 * 1000
+          );
+        }
       }
     });
 
@@ -500,10 +776,15 @@ export function executeOAuthProcess(options: OAuthProcessOptions): Promise<Accou
 
     // Timeout handling
     // Device code flows need longer timeout to match CLIProxy binary's polling window (60 attempts × 5s = 300s)
-    const timeoutMs = headless || isDeviceCodeFlow ? 300000 : 120000;
+    const timeoutMs = options.manualCallback
+      ? 10 * 60 * 1000
+      : headless || isDeviceCodeFlow
+        ? 300000
+        : 120000;
     const timeout = setTimeout(() => {
       // H7: Clear stdin keepalive interval
       if (stdinKeepalive) clearInterval(stdinKeepalive);
+      state.cancelManualCallbackPrompt?.();
       // H5: Remove signal handlers before killing process
       process.removeListener('SIGINT', cleanup);
       process.removeListener('SIGTERM', cleanup);
@@ -523,6 +804,7 @@ export function executeOAuthProcess(options: OAuthProcessOptions): Promise<Accou
       clearTimeout(timeout);
       // H7: Clear stdin keepalive interval
       if (stdinKeepalive) clearInterval(stdinKeepalive);
+      state.cancelManualCallbackPrompt?.();
       // H5: Remove signal handlers to prevent memory leaks
       process.removeListener('SIGINT', cleanup);
       process.removeListener('SIGTERM', cleanup);
@@ -585,6 +867,7 @@ export function executeOAuthProcess(options: OAuthProcessOptions): Promise<Accou
       clearTimeout(timeout);
       // H7: Clear stdin keepalive interval
       if (stdinKeepalive) clearInterval(stdinKeepalive);
+      state.cancelManualCallbackPrompt?.();
       // H5: Remove signal handlers to prevent memory leaks
       process.removeListener('SIGINT', cleanup);
       process.removeListener('SIGTERM', cleanup);
