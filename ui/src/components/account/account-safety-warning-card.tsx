@@ -8,6 +8,7 @@ import { RISK_ACK_PHRASE } from '@/components/account/antigravity-responsibility
 
 interface AccountSafetyWarningCardProps {
   className?: string;
+  compact?: boolean;
   showAcknowledgement?: boolean;
   acknowledgementPhrase?: string;
   acknowledgementText?: string;
@@ -18,6 +19,7 @@ interface AccountSafetyWarningCardProps {
 
 export function AccountSafetyWarningCard({
   className,
+  compact = false,
   showAcknowledgement = false,
   acknowledgementPhrase = RISK_ACK_PHRASE,
   acknowledgementText = '',
@@ -34,50 +36,126 @@ export function AccountSafetyWarningCard({
   const issueLabel = t('accountSafetyWarning.issueLabel');
   const proxySettingsLabel = t('accountSafetyWarning.proxySettingsLabel');
 
+  if (compact) {
+    return (
+      <section
+        role="alert"
+        className={cn('border-b border-amber-200/70 bg-amber-50/45 dark:bg-amber-950/5', className)}
+      >
+        <div className="flex flex-col gap-3 px-6 py-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex items-start gap-3">
+            <div className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/12 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold leading-5">{title}</p>
+                <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">{firstLine}</p>
+              <p className="text-xs font-medium leading-5 text-amber-900 dark:text-amber-200">
+                {secondLine}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <a
+              href={issueUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-background/90 px-2 py-1 text-[11px] font-medium text-amber-800 transition-colors hover:bg-amber-500/10 dark:text-amber-200"
+            >
+              {issueLabel}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            {showProxySettingsLink ? (
+              <a
+                href="/settings?tab=proxy"
+                className="inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-background/90 px-2 py-1 text-[11px] font-medium text-amber-800 transition-colors hover:bg-amber-500/10 dark:text-amber-200"
+              >
+                <Settings2 className="h-3 w-3" />
+                {proxySettingsLabel}
+              </a>
+            ) : null}
+            <Badge
+              variant="outline"
+              className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300"
+            >
+              High Risk
+            </Badge>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       role="alert"
       className={cn(
         'relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-50 via-background to-rose-50/70 shadow-sm dark:from-amber-950/20 dark:to-rose-950/20',
+        compact &&
+          'rounded-lg border-amber-400/25 bg-gradient-to-r from-amber-50/90 via-background to-background shadow-none dark:from-amber-950/10 dark:to-background',
         className
       )}
     >
       <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500" />
 
-      <div className="space-y-3 p-4">
+      <div className={cn('space-y-3 p-4', compact && 'space-y-2 px-3 py-2.5')}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5">
-            <div className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400">
+            <div
+              className={cn(
+                'mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400',
+                compact && 'h-6 w-6 rounded-lg'
+              )}
+            >
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-sm font-semibold leading-5">{title}</p>
+              <p className={cn('text-sm font-semibold leading-5', compact && 'text-xs')}>{title}</p>
               <p className="text-xs text-muted-foreground">{subtitle}</p>
             </div>
           </div>
           <Badge
             variant="outline"
-            className="border-amber-500/40 text-amber-700 dark:text-amber-300"
+            className={cn(
+              'border-amber-500/40 text-amber-700 dark:text-amber-300',
+              compact && 'h-5 px-1.5 text-[10px]'
+            )}
           >
             High Risk
           </Badge>
         </div>
 
-        <div className="space-y-2 text-sm leading-relaxed">
-          <p>{firstLine}</p>
-          <p className="font-medium text-amber-900 dark:text-amber-200">{secondLine}</p>
-          <p className="text-xs text-muted-foreground">
-            CCS is provided as-is and does not take responsibility for suspension, bans, or access
-            loss from upstream providers.
-          </p>
-        </div>
+        {compact ? (
+          <div className="space-y-1.5">
+            <p className="text-xs leading-5 text-muted-foreground">{firstLine}</p>
+            <p className="text-xs font-medium leading-5 text-amber-900 dark:text-amber-200">
+              {secondLine}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2 text-sm leading-relaxed">
+            <p>{firstLine}</p>
+            <p className="font-medium text-amber-900 dark:text-amber-200">{secondLine}</p>
+            <p className="text-xs text-muted-foreground">
+              CCS is provided as-is and does not take responsibility for suspension, bans, or access
+              loss from upstream providers.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <a
             href={issueUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-500/15 dark:text-amber-200"
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-500/15 dark:text-amber-200',
+              compact && 'px-2 py-0.5 text-[11px]'
+            )}
           >
             {issueLabel}
             <ExternalLink className="h-3.5 w-3.5" />
@@ -85,13 +163,21 @@ export function AccountSafetyWarningCard({
           {showProxySettingsLink && (
             <a
               href="/settings?tab=proxy"
-              className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-500/15 dark:text-amber-200"
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-500/15 dark:text-amber-200',
+                compact && 'px-2 py-0.5 text-[11px]'
+              )}
             >
               <Settings2 className="h-3.5 w-3.5" />
               {proxySettingsLabel}
             </a>
           )}
-          <span className="rounded-md border border-border/70 bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground">
+          <span
+            className={cn(
+              'rounded-md border border-border/70 bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground',
+              compact && 'px-2 py-0.5 text-[11px]'
+            )}
+          >
             Applies to CLI and dashboard auth
           </span>
         </div>
