@@ -139,7 +139,6 @@ export function resolveRuntimeCodexFallbackModel(options: {
 
 export async function reconcileCodexModelForActivePlan(
   options: {
-    settingsPath: string;
     currentModel: string | undefined;
     verbose: boolean;
   },

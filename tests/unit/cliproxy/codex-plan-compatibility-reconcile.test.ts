@@ -54,7 +54,6 @@ describe('codex plan compatibility reconcile', () => {
 
       await reconcileCodexModelForActivePlan(
         {
-          settingsPath,
           currentModel: 'gpt-5.3-codex',
           verbose: false,
         },
@@ -98,7 +97,6 @@ describe('codex plan compatibility reconcile', () => {
 
       await reconcileCodexModelForActivePlan(
         {
-          settingsPath,
           currentModel: 'gpt-5.3-codex',
           verbose: false,
         },
@@ -134,7 +132,6 @@ describe('codex plan compatibility reconcile', () => {
 
         await reconcileCodexModelForActivePlan(
           {
-            settingsPath,
             currentModel: 'gpt-5.3-codex',
             verbose: false,
           },
@@ -174,7 +171,6 @@ describe('codex plan compatibility reconcile', () => {
 
       await reconcileCodexModelForActivePlan(
         {
-          settingsPath,
           currentModel: 'gpt-5.3-codex',
           verbose: false,
         },
@@ -216,7 +212,6 @@ describe('codex plan compatibility reconcile', () => {
 
       await reconcileCodexModelForActivePlan(
         {
-          settingsPath,
           currentModel: 'gpt-5.3-codex',
           verbose: false,
         },
