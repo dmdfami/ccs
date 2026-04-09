@@ -33,6 +33,8 @@ import cliproxyServerRoutes from './proxy-routes';
 import authRoutes from './auth-routes';
 import persistRoutes from './persist-routes';
 import catalogRoutes from './catalog-routes';
+import catalogExportRoutes from './catalog-export-routes';
+import rotationDashboardRoutes from './rotation-dashboard-routes';
 import claudeExtensionRoutes from './claude-extension-routes';
 import logsRoutes from './logs-routes';
 
@@ -92,6 +94,8 @@ apiRoutes.use('/cliproxy/auth', cliproxyAuthRoutes);
 apiRoutes.use('/cliproxy', cliproxyStatsRoutes);
 apiRoutes.use('/cliproxy/sync', cliproxySyncRoutes);
 apiRoutes.use('/cliproxy/catalog', catalogRoutes);
+apiRoutes.use('/cliproxy/catalog', catalogExportRoutes);
+apiRoutes.use('/cliproxy', rotationDashboardRoutes);
 apiRoutes.use('/cliproxy/ai-providers', aiProviderRoutes);
 apiRoutes.use('/cliproxy/openai-compat', providerRoutes);
 

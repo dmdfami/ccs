@@ -759,6 +759,20 @@ export const DEFAULT_OFFICIAL_CHANNELS_CONFIG: OfficialChannelsConfig = {
 };
 
 /**
+ * Google OAuth configuration for dashboard authentication.
+ */
+export interface DashboardGoogleOAuthConfig {
+  /** Google OAuth client ID */
+  client_id: string;
+  /** Google OAuth client secret */
+  client_secret: string;
+  /** Whitelisted email addresses allowed to access the dashboard */
+  allowed_emails: string[];
+  /** OAuth callback URL (must match Google Console configuration) */
+  callback_url: string;
+}
+
+/**
  * Dashboard authentication configuration.
  * Optional login protection for CCS dashboard.
  * Disabled by default for backward compatibility.
@@ -766,12 +780,16 @@ export const DEFAULT_OFFICIAL_CHANNELS_CONFIG: OfficialChannelsConfig = {
 export interface DashboardAuthConfig {
   /** Enable dashboard authentication (default: false) */
   enabled: boolean;
-  /** Username for dashboard login */
+  /** Auth method: 'password' (bcrypt) or 'google-oauth' (default: 'password') */
+  method?: 'password' | 'google-oauth';
+  /** Username for dashboard login (used when method = 'password') */
   username: string;
   /** Bcrypt-hashed password (use: npx bcrypt-cli hash 'password') */
   password_hash: string;
   /** Session timeout in hours (default: 24) */
   session_timeout_hours?: number;
+  /** Google OAuth configuration (used when method = 'google-oauth') */
+  google?: DashboardGoogleOAuthConfig;
 }
 
 /**
@@ -780,6 +798,7 @@ export interface DashboardAuthConfig {
  */
 export const DEFAULT_DASHBOARD_AUTH_CONFIG: DashboardAuthConfig = {
   enabled: false,
+  method: 'password',
   username: '',
   password_hash: '',
   session_timeout_hours: 24,

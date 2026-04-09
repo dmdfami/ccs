@@ -21,7 +21,15 @@ declare module 'express-session' {
 }
 
 /** Public paths that bypass auth (lowercase for case-insensitive matching) */
-const PUBLIC_PATHS = ['/api/auth/login', '/api/auth/check', '/api/auth/setup', '/api/health'];
+const PUBLIC_PATHS = [
+  '/api/auth/login',
+  '/api/auth/check',
+  '/api/auth/setup',
+  '/api/auth/method',
+  '/api/auth/google',
+  '/api/health',
+  '/api/cliproxy/catalog/export',
+];
 
 /** Path to persistent session secret file */
 function getSessionSecretPath() {
@@ -96,7 +104,7 @@ export function createSessionMiddleware() {
       secure: false, // Local CLI uses HTTP
       httpOnly: true,
       maxAge,
-      sameSite: 'strict',
+      sameSite: 'lax', // 'lax' required for OAuth redirects (strict blocks callback)
     },
   });
 }

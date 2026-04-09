@@ -567,12 +567,21 @@ function mergeWithDefaults(partial: Partial<UnifiedConfig>): UnifiedConfig {
     // Dashboard auth config - disabled by default
     dashboard_auth: {
       enabled: partial.dashboard_auth?.enabled ?? DEFAULT_DASHBOARD_AUTH_CONFIG.enabled,
+      method: partial.dashboard_auth?.method ?? DEFAULT_DASHBOARD_AUTH_CONFIG.method,
       username: partial.dashboard_auth?.username ?? DEFAULT_DASHBOARD_AUTH_CONFIG.username,
       password_hash:
         partial.dashboard_auth?.password_hash ?? DEFAULT_DASHBOARD_AUTH_CONFIG.password_hash,
       session_timeout_hours:
         partial.dashboard_auth?.session_timeout_hours ??
         DEFAULT_DASHBOARD_AUTH_CONFIG.session_timeout_hours,
+      google: partial.dashboard_auth?.google
+        ? {
+            client_id: partial.dashboard_auth.google.client_id ?? '',
+            client_secret: partial.dashboard_auth.google.client_secret ?? '',
+            allowed_emails: partial.dashboard_auth.google.allowed_emails ?? [],
+            callback_url: partial.dashboard_auth.google.callback_url ?? '',
+          }
+        : undefined,
     },
     // Image analysis config - enabled by default for CLIProxy providers
     image_analysis: canonicalizeImageAnalysisConfig({
@@ -1290,9 +1299,11 @@ export function getDashboardAuthConfig(): DashboardAuthConfig {
       envEnabled !== undefined
         ? envEnabled === 'true' || envEnabled === '1'
         : (config.dashboard_auth?.enabled ?? false),
+    method: config.dashboard_auth?.method ?? 'password',
     username: envUsername ?? config.dashboard_auth?.username ?? '',
     password_hash: envPasswordHash ?? config.dashboard_auth?.password_hash ?? '',
     session_timeout_hours: config.dashboard_auth?.session_timeout_hours ?? 24,
+    google: config.dashboard_auth?.google,
   };
 }
 

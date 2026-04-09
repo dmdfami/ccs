@@ -14,6 +14,7 @@ import {
   Github,
   Puzzle,
   TerminalSquare,
+  RotateCcw,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -100,6 +101,7 @@ function buildNavGroups(t: (key: string) => string): SidebarGroupDef[] {
             { path: '/cliproxy', label: t('nav.cliproxyOverview') },
             { path: '/cliproxy/ai-providers', icon: Key, label: 'AI Providers' },
             { path: '/cliproxy/control-panel', icon: Gauge, label: t('nav.controlPanel') },
+            { path: '/cliproxy/rotation', icon: RotateCcw, label: t('nav.rotationDashboard') },
           ],
         },
         { path: '/copilot', icon: Github, label: t('nav.githubCopilot') },

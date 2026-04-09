@@ -46,6 +46,9 @@ const SettingsPage = lazy(() =>
 const HealthPage = lazy(() => import('@/pages/health').then((m) => ({ default: m.HealthPage })));
 const SharedPage = lazy(() => import('@/pages/shared').then((m) => ({ default: m.SharedPage })));
 const UpdatesPage = lazy(() => import('@/pages/updates').then((m) => ({ default: m.UpdatesPage })));
+const RotationDashboardPage = lazy(() =>
+  import('@/pages/rotation-dashboard').then((m) => ({ default: m.RotationDashboardPage }))
+);
 
 // Loading fallback for lazy components
 function PageLoader() {
@@ -116,6 +119,14 @@ export default function App() {
                       element={
                         <Suspense fallback={<PageLoader />}>
                           <CliproxyControlPanelPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/cliproxy/rotation"
+                      element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RotationDashboardPage />
                         </Suspense>
                       }
                     />

@@ -65,3 +65,14 @@ export function login(username: string, password: string): Promise<LoginResponse
 export function logout(): Promise<{ success: boolean }> {
   return request('/logout', { method: 'POST' });
 }
+
+export type AuthMethod = 'password' | 'google-oauth';
+
+export interface AuthMethodResponse {
+  method: AuthMethod;
+}
+
+/** Get configured auth method (password or google-oauth) */
+export function getAuthMethod(): Promise<AuthMethodResponse> {
+  return request('/method');
+}

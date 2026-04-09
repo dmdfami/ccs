@@ -1,11 +1,12 @@
 /**
  * Dashboard Authentication Routes
- * Handles login, logout, session check, and setup status.
+ * Handles login, logout, session check, setup status, and Google OAuth.
  */
 
 import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { getDashboardAuthConfig } from '../../config/unified-config-loader';
 import type { DashboardAuthConfig } from '../../config/unified-config-types';
 import { isLoopbackRemoteAddress, loginRateLimiter } from '../middleware/auth-middleware';
@@ -40,7 +41,10 @@ export function resolveDashboardAccessState(
   remoteAddress: string | undefined
 ): DashboardAccessState {
   const isLocalAccess = isLoopbackRemoteAddress(remoteAddress);
-  const authConfigured = Boolean(authConfig.username && authConfig.password_hash);
+  const isGoogleOAuth = authConfig.method === 'google-oauth';
+  const authConfigured = isGoogleOAuth
+    ? Boolean(authConfig.google?.client_id && authConfig.google?.client_secret)
+    : Boolean(authConfig.username && authConfig.password_hash);
 
   if (!authConfig.enabled) {
     return {
@@ -162,6 +166,125 @@ router.get('/setup', (_req: Request, res: Response) => {
     configured: !!(authConfig.username && authConfig.password_hash),
     sessionTimeoutHours: authConfig.session_timeout_hours ?? 24,
   });
+});
+
+/**
+ * GET /api/auth/method
+ * Return the configured auth method so the frontend can render the correct login UI.
+ */
+router.get('/method', (_req: Request, res: Response) => {
+  const authConfig = getDashboardAuthConfig();
+  res.json({ method: authConfig.method ?? 'password' });
+});
+
+/**
+ * GET /api/auth/google
+ * Redirect user to Google OAuth consent screen.
+ * Rate limited by loginRateLimiter.
+ */
+router.get('/google', loginRateLimiter, (_req: Request, res: Response) => {
+  const authConfig = getDashboardAuthConfig();
+
+  if (authConfig.method !== 'google-oauth' || !authConfig.google) {
+    res.status(400).json({ error: 'Google OAuth is not configured' });
+    return;
+  }
+
+  const { client_id, callback_url } = authConfig.google;
+  if (!client_id || !callback_url) {
+    res.status(500).json({ error: 'Google OAuth client_id or callback_url not configured' });
+    return;
+  }
+
+  const client = new OAuth2Client(client_id, undefined, callback_url);
+  const authUrl = client.generateAuthUrl({
+    access_type: 'online',
+    scope: ['openid', 'email', 'profile'],
+    prompt: 'select_account',
+  });
+
+  res.redirect(authUrl);
+});
+
+/**
+ * GET /api/auth/google/callback
+ * Handle Google OAuth callback: exchange code, verify email whitelist, create session.
+ */
+router.get('/google/callback', loginRateLimiter, async (req: Request, res: Response) => {
+  const { code, error: oauthError } = req.query;
+
+  // User denied access
+  if (oauthError) {
+    res.redirect('/?auth_error=access_denied');
+    return;
+  }
+
+  if (!code || typeof code !== 'string') {
+    res.redirect('/?auth_error=missing_code');
+    return;
+  }
+
+  const authConfig = getDashboardAuthConfig();
+
+  if (authConfig.method !== 'google-oauth' || !authConfig.google) {
+    res.status(400).json({ error: 'Google OAuth is not configured' });
+    return;
+  }
+
+  const { client_id, client_secret, callback_url, allowed_emails } = authConfig.google;
+
+  if (!client_id || !client_secret || !callback_url) {
+    res.status(500).json({ error: 'Incomplete Google OAuth configuration' });
+    return;
+  }
+
+  try {
+    const client = new OAuth2Client(client_id, client_secret, callback_url);
+    const { tokens } = await client.getToken(code);
+
+    if (!tokens.id_token) {
+      res.redirect('/?auth_error=no_id_token');
+      return;
+    }
+
+    // Verify the ID token and extract user info
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: client_id,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.redirect('/?auth_error=invalid_token');
+      return;
+    }
+
+    const { email, name } = payload;
+
+    // Check email whitelist
+    const isAllowed =
+      allowed_emails.length === 0 ||
+      allowed_emails.some((e) => e.toLowerCase() === email.toLowerCase());
+
+    if (!isAllowed) {
+      res.redirect('/?auth_error=email_not_allowed');
+      return;
+    }
+
+    // Regenerate session to prevent fixation, then set auth
+    req.session.regenerate((err) => {
+      if (err) {
+        res.redirect('/?auth_error=session_error');
+        return;
+      }
+      req.session.authenticated = true;
+      req.session.username = name ?? email;
+      res.redirect('/');
+    });
+  } catch (err) {
+    console.error('[auth] Google OAuth callback error:', (err as Error).message);
+    res.redirect('/?auth_error=oauth_failed');
+  }
 });
 
 export default router;
